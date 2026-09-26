@@ -212,6 +212,29 @@ describe('HTTP pipeline', () => {
       '/api/v1/health/ready',
     );
   });
+
+  it('documents a success body and the problem responses of every API operation', async () => {
+    const { paths } = (await http().get('/api/docs-json').expect(200)).body as {
+      paths: Record<string, Record<string, { responses: Record<string, { content?: object }> }>>;
+    };
+    const operations = Object.entries(paths)
+      .filter(([path]) => !path.startsWith('/api/v1/health/') && !path.includes('__probe'))
+      .flatMap(([path, methods]) =>
+        Object.entries(methods).map(([method, operation]) => ({ path, method, operation })),
+      );
+    expect(operations.length).toBeGreaterThanOrEqual(23);
+
+    for (const { path, method, operation } of operations) {
+      const statuses = Object.keys(operation.responses);
+      const success = statuses.find((status) => status.startsWith('2'));
+      const where = `${method.toUpperCase()} ${path}`;
+      expect(success, where).toBeDefined();
+      if (success !== '204' && success !== '202') {
+        expect(operation.responses[success ?? '']?.content, where).toBeDefined();
+      }
+      expect(statuses, where).toEqual(expect.arrayContaining(['400', '429', 'default']));
+    }
+  });
 });
 
 describe('rate limiting', () => {

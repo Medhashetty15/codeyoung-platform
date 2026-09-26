@@ -1,9 +1,10 @@
 import { Controller, Get, Header } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { type BookingConfig, type TimezonesResponse } from '@app/contracts';
 
 import { Public } from '../../../common/auth/public.decorator';
+import { ApiProblems, BookingConfigDto, TimezonesResponseDto } from '../../../common/http/api-docs';
 import { AppConfig } from '../../../config/app-config';
 import { buildZoneCatalog } from '../application/zone-catalog';
 
@@ -17,6 +18,8 @@ export class MetaController {
 
   /** Business knobs the UI must not hard-code (docs/03 §9, PD-03, PD-15). */
   @Get('booking-config')
+  @ApiResponse({ status: 200, type: BookingConfigDto })
+  @ApiProblems()
   @Header('Cache-Control', 'public, max-age=300')
   bookingConfig(): BookingConfig {
     const booking = this.config.booking;
@@ -32,6 +35,8 @@ export class MetaController {
   }
 
   @Get('timezones')
+  @ApiResponse({ status: 200, type: TimezonesResponseDto })
+  @ApiProblems()
   @Header('Cache-Control', 'public, max-age=86400')
   timezones(): TimezonesResponse {
     return this.zones;
