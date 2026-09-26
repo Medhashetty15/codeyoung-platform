@@ -8,9 +8,12 @@ import {
 } from '@nestjs/terminus';
 import { SkipThrottle } from '@nestjs/throttler';
 
+import { Public } from '../../common/auth/public.decorator';
+
 const DB_PING_TIMEOUT_MS = 1500;
 
 @ApiTags('health')
+@Public()
 @SkipThrottle()
 @Controller('health')
 export class HealthController {

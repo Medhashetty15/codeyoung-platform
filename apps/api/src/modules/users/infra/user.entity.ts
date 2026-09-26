@@ -38,6 +38,10 @@ export class UserEntity {
   @Column({ type: 'int', default: 0 })
   failedLoginAttempts: number;
 
+  /** First failure of the current lockout window (LOGIN_LOCK_MINUTES long). */
+  @Column({ type: 'timestamptz', nullable: true })
+  failedLoginWindowStartedAt: Date | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   lockedUntil: Date | null;
 

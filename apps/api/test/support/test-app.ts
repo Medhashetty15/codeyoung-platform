@@ -10,11 +10,16 @@ import { inject } from 'vitest';
 
 import { ApiModule } from '../../src/api.module';
 import { configureHttpApp, HTTP_APP_OPTIONS } from '../../src/bootstrap/configure-http-app';
+import { Clock } from '../../src/common/clock/clock';
 import { AppConfig } from '../../src/config/app-config';
+
+export const TEST_JWT_SECRET = 'integration-test-secret-at-least-32-bytes';
 
 export interface TestAppOptions {
   env?: Record<string, string>;
   controllers?: Type[];
+  /** Replaces the system clock (token expiry, lockout, reset links). */
+  clock?: Clock;
 }
 
 /** Boots the real API module with the production HTTP pipeline against the test database. */
@@ -22,17 +27,20 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<NestE
   const config = AppConfig.fromEnv({
     NODE_ENV: 'test',
     DATABASE_URL: inject('databaseUrl'),
+    JWT_ACCESS_SECRET: TEST_JWT_SECRET,
     LOG_LEVEL: 'silent',
     WEB_BASE_URL: 'http://localhost:5173',
     ...options.env,
   });
-  const moduleRef = await Test.createTestingModule({
+  let builder = Test.createTestingModule({
     imports: [ApiModule],
     controllers: options.controllers ?? [],
   })
     .overrideProvider(AppConfig)
-    .useValue(config)
-    .compile();
+    .useValue(config);
+  if (options.clock !== undefined)
+    builder = builder.overrideProvider(Clock).useValue(options.clock);
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication<NestExpressApplication>(HTTP_APP_OPTIONS);
   app.useLogger(app.get(Logger));

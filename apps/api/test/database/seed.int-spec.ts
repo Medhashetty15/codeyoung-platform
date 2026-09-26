@@ -13,6 +13,7 @@ import {
 } from '@app/time';
 
 import { AppConfig } from '../../src/config/app-config';
+import { MIGRATIONS } from '../../src/database/migrations';
 import { DatabaseSeeder, SeedRefusedError } from '../../src/database/seed/database-seeder';
 import {
   DEFAULT_DEMO_PASSWORD,
@@ -31,12 +32,18 @@ import {
   single,
   type TestDatabase,
 } from '../support/database';
+import { TEST_JWT_SECRET } from '../support/test-app';
 
 let database: TestDatabase;
 let db: DataSource;
 
 function config(env: Record<string, string> = {}): AppConfig {
-  return AppConfig.fromEnv({ DATABASE_URL: database.url, NODE_ENV: 'test', ...env });
+  return AppConfig.fromEnv({
+    DATABASE_URL: database.url,
+    JWT_ACCESS_SECRET: TEST_JWT_SECRET,
+    NODE_ENV: 'test',
+    ...env,
+  });
 }
 
 function fakeOutput() {
@@ -233,8 +240,8 @@ describe('database commands', () => {
 
     await new DbRevertCommand(db, fakePrompt(false).prompt, output).run([], { yes: false });
 
-    expect(lines[0]).toMatch(/^Will revert InitialSchema\d+/);
+    expect(lines[0]).toMatch(new RegExp(`^Will revert ${MIGRATIONS.at(-1)?.name ?? ''}`));
     expect(lines.at(-1)).toBe('Nothing changed.');
-    expect(await count('schema_migrations')).toBe(1);
+    expect(await count('schema_migrations')).toBe(MIGRATIONS.length);
   });
 });

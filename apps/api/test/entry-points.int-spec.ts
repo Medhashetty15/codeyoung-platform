@@ -8,7 +8,9 @@ import { AppConfig } from '../src/config/app-config';
 import { ConfigPrintCommand } from '../src/modules/ops-cli/config-print.command';
 import { WorkerModule } from '../src/worker.module';
 
-const ENV_KEYS = ['DATABASE_URL', 'LOG_LEVEL', 'NODE_ENV'] as const;
+import { TEST_JWT_SECRET } from './support/test-app';
+
+const ENV_KEYS = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'LOG_LEVEL', 'NODE_ENV'] as const;
 
 describe('worker and CLI entry modules', () => {
   const saved: Partial<Record<(typeof ENV_KEYS)[number], string>> = {};
@@ -16,6 +18,7 @@ describe('worker and CLI entry modules', () => {
   beforeEach(() => {
     for (const key of ENV_KEYS) saved[key] = process.env[key];
     process.env.DATABASE_URL = inject('databaseUrl');
+    process.env.JWT_ACCESS_SECRET = TEST_JWT_SECRET;
     process.env.LOG_LEVEL = 'silent';
     process.env.NODE_ENV = 'test';
   });

@@ -29,6 +29,13 @@ describe('formatTime', () => {
     expect(formatTime(instant, 'Asia/Kolkata')).toBe(`1:30${NBSP}AM`);
   });
 
+  it('writes two hour digits on 24-hour clocks', () => {
+    expect(formatTime('2026-10-23T23:00:00Z', 'Europe/London', 'en-GB')).toBe('00:00');
+    expect(formatTime('2026-10-24T08:30:00Z', 'Europe/London', 'en-GB')).toBe('09:30');
+    expect(formatTime('2026-10-24T08:30:00Z', 'Europe/London', 'de-DE')).toBe('09:30');
+    expect(formatTime('2026-10-24T08:30:00Z', 'Europe/London', 'en-US')).toBe(`9:30${NBSP}AM`);
+  });
+
   it('defaults to en-US', () => {
     expect(formatTime(LONDON_5PM, 'Europe/London')).toBe(`5:00${NBSP}PM`);
   });
@@ -54,6 +61,9 @@ describe('formatTimeRange', () => {
     expect(formatTimeRange(LONDON_5PM, LONDON_6PM, 'Europe/London', 'en-GB')).toBe(
       '17:00 to 18:00',
     );
+    expect(
+      formatTimeRange('2026-10-23T23:00:00Z', '2026-10-24T00:00:00Z', 'Europe/London', 'en-GB'),
+    ).toBe('00:00 to 01:00');
   });
 
   it('keeps en-GB lowercase day periods when 12-hour is forced by the locale', () => {

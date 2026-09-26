@@ -22,7 +22,22 @@ const DATE_STYLES: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   monthShort: { month: 'short' },
 };
 
-const TIME_OPTIONS: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
+const TWELVE_HOUR: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
+// 24-hour clocks always write two hour digits ("09:30", "00:00"), as UK readers expect;
+// Intl's 'numeric' hour would give "9:30" and misalign a slot grid.
+const TWENTY_FOUR_HOUR: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+
+const hourCycles = new Map<string, boolean>();
+
+function timeOptions(locale: string): Intl.DateTimeFormatOptions {
+  let twentyFour = hourCycles.get(locale);
+  if (twentyFour === undefined) {
+    const { hourCycle } = new Intl.DateTimeFormat(locale, { hour: 'numeric' }).resolvedOptions();
+    twentyFour = hourCycle === 'h23' || hourCycle === 'h24';
+    hourCycles.set(locale, twentyFour);
+  }
+  return twentyFour ? TWENTY_FOUR_HOUR : TWELVE_HOUR;
+}
 
 // Engines disagree on the space before AM/PM (U+202F from ICU, U+0020 from V8's
 // format() compatibility patch) and sometimes emit U+2009. Output is always built
@@ -62,9 +77,9 @@ function formatter(
   return cached;
 }
 
-/** "5:00 PM" (en-US), "17:00" (en-GB). The locale decides the hour cycle. */
+/** "5:00 PM" (en-US), "17:00" and "09:30" (en-GB). The locale decides the hour cycle. */
 export function formatTime(at: InstantLike, zone: string, locale = DEFAULT_LOCALE): string {
-  return formatInstant(formatter(locale, zone, TIME_OPTIONS), at);
+  return formatInstant(formatter(locale, zone, timeOptions(locale)), at);
 }
 
 /** Date of the instant in `zone`, in one of the fixed styles. */
@@ -94,7 +109,7 @@ export function formatDateTime(at: InstantLike, zone: string, locale = DEFAULT_L
 
 /**
  * Time range without dashes (docs/07 copy rules; never Intl formatRange):
- * "5:00 to 6:00 PM", "11:30 AM to 12:30 PM", "17:00 to 18:00". The day period
+ * "5:00 to 6:00 PM", "11:30 AM to 12:30 PM", "17:00 to 18:00", "00:00 to 01:00". The day period
  * is written once when both ends share it.
  */
 export function formatTimeRange(
@@ -103,7 +118,7 @@ export function formatTimeRange(
   zone: string,
   locale = DEFAULT_LOCALE,
 ): string {
-  const format = formatter(locale, zone, TIME_OPTIONS);
+  const format = formatter(locale, zone, timeOptions(locale));
   const startParts = format.formatToParts(toInstant(start).epochMilliseconds);
   const endParts = format.formatToParts(toInstant(end).epochMilliseconds);
   const period = (parts: Intl.DateTimeFormatPart[]) =>
