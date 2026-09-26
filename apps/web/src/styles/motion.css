@@ -1,0 +1,265 @@
+/*
+ * Motion tokens and the reusable motion utilities from doc 07 §7.3.
+ * Anything not listed in §7.3 does not animate. Every utility carries its reduced-motion variant.
+ */
+
+@theme {
+  --ease-*: initial;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:root {
+  --dur-press: 140ms;
+  --dur-color: 160ms;
+  --dur-popover: 200ms;
+  --dur-modal: 250ms;
+  --dur-sheet: 400ms;
+  --dur-reveal: 600ms;
+}
+
+/* Row 2: hover only for precise pointers (touch fakes sticky hovers). */
+@custom-variant hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
+/* Rows 1 + 2: press feedback and colour feedback for every tappable control. */
+@utility pressable {
+  transition-property: transform, background-color, border-color, color;
+  transition-duration: var(--dur-press), var(--dur-color), var(--dur-color), var(--dur-color);
+  transition-timing-function: var(--ease-out), ease, ease, ease;
+
+  &:active:not(:disabled, [aria-disabled='true'], [data-disabled]) {
+    transform: scale(0.97);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &:active:not(:disabled, [aria-disabled='true'], [data-disabled]) {
+      transform: none;
+    }
+  }
+}
+
+/* Row 8: popovers, menus, zone picker (desktop). Scales from its trigger. */
+@utility motion-popover {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity var(--dur-popover) var(--ease-out),
+    transform var(--dur-popover) var(--ease-out);
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  &[data-ending-style] {
+    transition-duration: 150ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &[data-starting-style],
+    &[data-ending-style] {
+      transform: none;
+    }
+  }
+}
+
+/* Rows 9 + 10: centred dialog from 640px, bottom sheet below. */
+@utility motion-dialog {
+  transition:
+    opacity var(--dur-modal) var(--ease-out),
+    transform var(--dur-modal) var(--ease-out);
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  @media (width < 40rem) {
+    transition: transform var(--dur-sheet) var(--ease-drawer);
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      opacity: 1;
+      transform: translateY(100%);
+    }
+
+    &[data-ending-style] {
+      transition-duration: 250ms;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity var(--dur-modal) var(--ease-out);
+
+    &[data-starting-style],
+    &[data-ending-style] {
+      opacity: 0;
+      transform: none;
+    }
+  }
+}
+
+@utility motion-backdrop {
+  transition: opacity var(--dur-modal) var(--ease-out);
+
+  &[data-starting-style],
+  &[data-ending-style] {
+    opacity: 0;
+  }
+
+  @media (width < 40rem) {
+    transition-duration: var(--dur-sheet);
+
+    &[data-ending-style] {
+      transition-duration: 250ms;
+    }
+  }
+}
+
+/* Rows 4 + 5: content fading in after a swap (slot grid after a pointer date change, skeleton to content). */
+@utility motion-swap-in {
+  transition:
+    opacity 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    @starting-style {
+      transform: none;
+    }
+  }
+}
+
+@utility motion-fade-in {
+  transition: opacity 160ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+/* Row 6: skeleton shimmer, a low-contrast sweep on a pseudo-element via transform. */
+@utility skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--surface-sunken);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(90deg, transparent, var(--highlight), transparent);
+    animation: cy-shimmer 1.4s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      content: none;
+    }
+  }
+}
+
+@keyframes cy-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Row 18: the product's only perpetual loop, and only while a class is live. */
+@utility live-pulse {
+  animation: cy-live-pulse 2s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes cy-live-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Row 20: once-only landing reveals; `data-revealed` is set by an IntersectionObserver. */
+@utility reveal {
+  @media (prefers-reduced-motion: no-preference) {
+    &:not([data-revealed]) {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    transition:
+      opacity var(--dur-reveal) var(--ease-out),
+      transform var(--dur-reveal) var(--ease-out);
+  }
+}
+
+/* Row 16: booking confirmed mark. The headline that follows uses `confirmed-headline`. */
+.confirmed-mark-disc {
+  transform-origin: center;
+  transform-box: fill-box;
+  transition:
+    opacity 250ms var(--ease-out),
+    transform 250ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+.confirmed-mark-check {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 400ms var(--ease-out) 250ms;
+
+  @starting-style {
+    stroke-dashoffset: 1;
+  }
+}
+
+.confirmed-headline {
+  transition:
+    opacity 250ms var(--ease-out) 80ms,
+    transform 250ms var(--ease-out) 80ms;
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirmed-mark-disc {
+    @starting-style {
+      transform: none;
+    }
+  }
+
+  .confirmed-mark-check {
+    transition: none;
+
+    @starting-style {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .confirmed-headline {
+    @starting-style {
+      transform: none;
+    }
+  }
+}

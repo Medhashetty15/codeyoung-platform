@@ -1,0 +1,156 @@
+/*
+ * Design tokens (doc 07 §2-§4). The only place colours, type, radii and depth are defined.
+ * Theme is resolved before first paint by the inline script in index.html, which always sets
+ * data-theme="light" | "dark" on <html> (System follows prefers-color-scheme live).
+ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light;
+  --canvas: #fafafa;
+  --surface: #ffffff;
+  --surface-sunken: #f4f4f5;
+  --ink: #18181b;
+  --ink-muted: #52525b;
+  --ink-faint: #71717a;
+  --line: #e4e4e7;
+  --line-control: #8a8a93;
+  --accent: #166a4e;
+  --accent-hover: #11573f;
+  --accent-tint: #e7f3ee;
+  --accent-ink: #0f4e39;
+  --on-accent: #ffffff;
+  --on-danger: #ffffff;
+  --danger: #b42318;
+  --danger-tint: #fdecea;
+  --caution: #8a4b08;
+  --caution-tint: #fef3e2;
+  --shadow-tint: 24 24 27;
+  --header-glass: rgb(250 250 250 / 0.8);
+  --highlight: rgb(255 255 255 / 0.7);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: #0e0e10;
+  --surface: #17171a;
+  --surface-sunken: #1f1f23;
+  --ink: #f4f4f5;
+  --ink-muted: #a1a1aa;
+  --ink-faint: #8b8b94;
+  --line: #2a2a2f;
+  --line-control: #6b6b73;
+  --accent: #3dbe8b;
+  --accent-hover: #52cb9a;
+  --accent-tint: #12291f;
+  --accent-ink: #7fddb5;
+  --on-accent: #08261b;
+  --on-danger: #1f0a08;
+  --danger: #f97066;
+  --danger-tint: #2a1413;
+  --caution: #fdb022;
+  --caution-tint: #2a1e0a;
+  --shadow-tint: 0 0 0;
+  --header-glass: rgb(14 14 16 / 0.8);
+  --highlight: rgb(255 255 255 / 0.05);
+}
+
+@media (prefers-contrast: more) {
+  :root,
+  :root[data-theme='dark'] {
+    --line: var(--line-control);
+  }
+}
+
+/* Accent lock: the default Tailwind palette is removed so only these colours exist. */
+@theme inline {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-control: var(--line-control);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-ink: var(--accent-ink);
+  --color-on-accent: var(--on-accent);
+  --color-on-danger: var(--on-danger);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+  --color-caution: var(--caution);
+  --color-caution-tint: var(--caution-tint);
+
+  --shadow-*: initial;
+  --shadow-float:
+    0 1px 2px rgb(var(--shadow-tint) / 0.04), 0 12px 32px -16px rgb(var(--shadow-tint) / 0.18);
+  --inset-shadow-highlight: inset 0 1px 0 var(--highlight);
+}
+
+@theme {
+  --font-*: initial;
+  --font-sans: 'Figtree Variable', 'Figtree Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --text-*: initial;
+  --text-display: clamp(2.25rem, 1.6rem + 2.6vw, 3.5rem);
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 700;
+  --text-h1: 1.75rem;
+  --text-h1--line-height: 1.15;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h1--font-weight: 700;
+  --text-h2: 1.375rem;
+  --text-h2--line-height: 1.25;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 700;
+  --text-h3: 1.0625rem;
+  --text-h3--line-height: 1.35;
+  --text-h3--font-weight: 500;
+  --text-time-xl: 1.75rem;
+  --text-time-xl--line-height: 1.1;
+  --text-time-xl--letter-spacing: -0.02em;
+  --text-time-xl--font-weight: 700;
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+  --text-small--letter-spacing: 0.005em;
+  --text-micro: 0.75rem;
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 0.02em;
+  --text-micro--font-weight: 500;
+
+  --radius-*: initial;
+  --radius-control: 10px;
+  --radius-surface: 16px;
+  --radius-tray: 22px;
+  --radius-pill: 9999px;
+
+  --container-content: 70rem; /* 1120px */
+  --container-form: 25rem; /* 400px */
+  --container-prose: 65ch;
+}
+
+@media (width >= 40rem) {
+  :root {
+    --text-h1: 2rem;
+  }
+}
+
+/* Metric-matched fallback so the Figtree swap causes no layout shift (computed from font files). */
+@font-face {
+  font-family: 'Figtree Fallback';
+  src: local('Arial'), local('Helvetica Neue'), local('Helvetica');
+  size-adjust: 100.77%;
+  ascent-override: 94.28%;
+  descent-override: 24.81%;
+  line-gap-override: 0%;
+}

@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/figtree/wght.css';
+@import '@fontsource-variable/jetbrains-mono/wght.css';
+@import './tokens.css';
+@import './motion.css';
+@import './base.css';

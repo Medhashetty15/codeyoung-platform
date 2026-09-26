@@ -12,10 +12,11 @@
     "npm": ">=10"
   },
   "scripts": {
-    "dev": "npm run build:packages && concurrently --names packages,api,worker --prefix-colors gray,blue,magenta \"npm:dev:packages\" \"npm:dev:api\" \"npm:dev:worker\"",
+    "dev": "npm run build:packages && concurrently --names packages,api,worker,web --prefix-colors gray,blue,magenta,green \"npm:dev:packages\" \"npm:dev:api\" \"npm:dev:worker\" \"npm:dev:web\"",
     "dev:packages": "tsc -b --watch --preserveWatchOutput packages/contracts/tsconfig.build.json packages/time/tsconfig.build.json",
     "dev:api": "npm run dev -w @app/api",
     "dev:worker": "npm run dev:worker -w @app/api",
+    "dev:web": "npm run dev -w @app/web",
     "cli": "npm run cli -w @app/api --",
     "build": "npm run build --workspaces --if-present",
     "build:packages": "tsc -b packages/contracts/tsconfig.build.json packages/time/tsconfig.build.json",
