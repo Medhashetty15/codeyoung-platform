@@ -94,7 +94,8 @@ npm run e2e -w @app/web               # starts, or reuses, the web dev server on
 npx playwright show-report apps/web/e2e-report   # results, traces and the attached screenshots
 ```
 
-Each zone project first runs `db:seed --scenario e2e --tz <zone>`, which **resets** the database in
+Each zone project first runs the built CLI (`node apps/api/dist/cli.js db:seed --scenario e2e --tz <zone>`;
+`npm run dev:api` or `npm run build -w @app/api` produces it), which **resets** the database in
 `apps/api/.env`; never point it at data you want to keep. Per zone it books as a new parent and checks
 the parent email (their zone) and the mentor email (IST plus the family's time), races two families
 for the last free mentor, moves and cancels a trial, and resets a password from the Mailpit link. In CI

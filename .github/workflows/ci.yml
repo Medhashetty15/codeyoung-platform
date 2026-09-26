@@ -140,6 +140,7 @@ jobs:
           done
           cat api.log
           exit 1
+      # Nothing listens on 4173 here, so Playwright starts and owns `vite preview` itself.
       - name: Playwright (seeds the e2e scenario per zone)
         run: npm run e2e -w @app/web
       - if: failure()
