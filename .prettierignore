@@ -8,3 +8,5 @@ package-lock.json
 docs
 apps/web/public/mockServiceWorker.js
 apps/api/src/modules/notifications/templates
+apps/web/e2e-report
+apps/web/e2e-results

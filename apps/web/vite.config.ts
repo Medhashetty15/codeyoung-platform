@@ -7,6 +7,10 @@ import { preloadFonts } from './scripts/preload-fonts.ts';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, import.meta.dirname, 'VITE_');
+  // Same-origin API keeps the SameSite=Strict refresh cookie working (doc 05 §2).
+  const proxy = {
+    '/api': { target: env.VITE_API_PROXY_TARGET ?? 'http://localhost:3001', changeOrigin: false },
+  };
   return {
     plugins: [react(), tailwindcss(), preloadFonts()],
     resolve: {
@@ -15,17 +19,9 @@ export default defineConfig(({ mode }) => {
     },
     // Specs running in the node environment resolve through SSR; keep them on sources too.
     ssr: { resolve: { conditions: ['@app/source', ...defaultServerConditions] } },
-    server: {
-      port: 5173,
-      strictPort: true,
-      proxy: {
-        // Same-origin API keeps the SameSite=Strict refresh cookie working (doc 05 §2).
-        '/api': {
-          target: env.VITE_API_PROXY_TARGET ?? 'http://localhost:3001',
-          changeOrigin: false,
-        },
-      },
-    },
+    server: { port: 5173, strictPort: true, proxy },
+    // The built app, served for end-to-end tests in CI (doc 05 §13).
+    preview: { port: 4173, strictPort: true, proxy },
     build: {
       target: 'es2022',
       sourcemap: true,
