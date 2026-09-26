@@ -1,28 +1,41 @@
-import { toast } from 'sonner';
+import type { ToastTone } from './ToastView';
 
-import { ToastView, type ToastTone } from './ToastView';
+interface NotifyOptions {
+  description?: string;
+  /** Toasts that may fire twice (retries) pass an id so the second replaces the first. */
+  id?: string;
+}
 
-function show(tone: ToastTone, title: string, options?: { description?: string; id?: string }) {
-  return toast.custom(
-    () => <ToastView tone={tone} title={title} description={options?.description} />,
-    {
-      ...(options?.id && { id: options.id }),
-    },
-  );
+let resolveReady: () => void = () => {};
+const toasterReady = new Promise<void>((resolve) => {
+  resolveReady = resolve;
+});
+
+/** Called by <Toaster /> once mounted; toasts fired before that wait instead of getting lost. */
+export function markToasterReady(): void {
+  resolveReady();
+}
+
+async function show(tone: ToastTone, title: string, options: NotifyOptions = {}) {
+  // Sonner and the toast view load on first use, keeping them out of the first page load.
+  const [{ toast }, { ToastView }] = await Promise.all([
+    import('sonner'),
+    import('./ToastView'),
+    toasterReady,
+  ]);
+  toast.custom(() => <ToastView tone={tone} title={title} description={options.description} />, {
+    ...(options.id && { id: options.id }),
+  });
 }
 
 /**
  * Transient confirmations only ("Link copied", "Trial cancelled"). Persistent information belongs
- * in a <Notice> (doc 07 §6). Pass an `id` for toasts that may fire twice so the second replaces the first.
+ * in a <Notice> (doc 07 §6).
  */
 export const notify = Object.assign(
-  (title: string, options?: { description?: string; id?: string }) =>
-    show('neutral', title, options),
+  (title: string, options?: NotifyOptions) => void show('neutral', title, options),
   {
-    success: (title: string, options?: { description?: string; id?: string }) =>
-      show('success', title, options),
-    error: (title: string, options?: { description?: string; id?: string }) =>
-      show('danger', title, options),
-    dismiss: (id?: string) => toast.dismiss(id),
+    success: (title: string, options?: NotifyOptions) => void show('success', title, options),
+    error: (title: string, options?: NotifyOptions) => void show('danger', title, options),
   },
 );

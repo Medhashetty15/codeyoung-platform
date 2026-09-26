@@ -157,8 +157,8 @@ Banned: Inter, Roboto, Open Sans, Arial as the brand face; any serif (this is pr
 ## 6. Components (Base UI + our styling)
 
 Primitives from **Base UI** (unstyled, accessible, exposes `data-starting-style`, `data-ending-style`
-and `--transform-origin` for motion). Variants via **cva**, conditional classes via **clsx** +
-`tailwind-merge`. Toasts via **Sonner** (headless `toast.custom` wrapped in our own `notify()` API).
+and `--transform-origin` for motion). Variants via **cva**, conditional classes via **clsx**
+(no `tailwind-merge`: variants go through props, `className` only adds layout). Toasts via **Sonner** (headless `toast.custom` wrapped in our own `notify()` API).
 
 | Component | Spec |
 |-----------|------|

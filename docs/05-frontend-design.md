@@ -26,7 +26,7 @@ Library picks follow the curated `pick-ui-library` list; nothing is added withou
 | Forms | React Hook Form + zod resolver | Schemas from `@app/contracts`, identical to server validation. |
 | Styling | Tailwind CSS v4 (Vite plugin) + CSS variables from doc 07 | Tokens in one place, both themes. |
 | Primitives | **Base UI** (verify package name at install, `@base-ui/react`) | Unstyled, accessible dialogs, popovers, menus, combobox, tabs, accordion; exposes `data-starting-style` / `--transform-origin` for correct motion. |
-| Variants | cva + clsx + tailwind-merge | Typed component variants, clean conditional classes. |
+| Variants | cva + clsx | Typed component variants, clean conditional classes. No tailwind-merge (bundle size): variants go through props, `className` only adds layout. |
 | Toasts | Sonner (headless `toast.custom`) | One `<Toaster />`, wrapped in our `notify()` API. |
 | Icons | Phosphor (`@phosphor-icons/core` SVGs, generated components) | One family, regular weight only; the React package ships all six weights per icon. |
 | Countdown | NumberFlow (`@number-flow/react`) | Proper digit transitions, reduced-motion aware. |
@@ -322,8 +322,11 @@ sequenceDiagram
 
 ## 11. Time-zone UX
 
-- **Display zone resolution:** `?tz` in URL, then profile zone (logged in), then saved preference
-  (`localStorage`, try/catch), then device zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`), then UTC.
+- **Display zone resolution:** `?tz` in URL, then a zone picked during this visit, then profile zone
+  (logged in), then saved preference (`localStorage`, try/catch), then device zone
+  (`Intl.DateTimeFormat().resolvedOptions().timeZone`), then UTC. Ids are canonicalised first
+  (`Asia/Calcutta` becomes `Asia/Kolkata`). A pick made this visit must win over the profile, or
+  choosing "Just for now" in the profile prompt would appear to do nothing.
 - **Zone label** (`zoneLabel(zone, instant)` in `@app/time`, shared with emails): US zones use the generic
   name ("Eastern Time (GMT-4)"), others the city ("London time (GMT+1)", "Kolkata time (GMT+5:30)").
   Offsets computed for the dates on screen, so after 25 Oct the label reads "London time (GMT)".
@@ -371,7 +374,9 @@ nothing imports from `routes/` or `app/`. Enforced with ESLint `import/no-restri
 - `api<T>(path, { method, body, schema, auth = true, idempotencyKey, signal })`: base `/api/v1`, JSON,
   Bearer from the store, `X-Requested-With: cy-web` on cookie-authenticated auth calls, refresh-and-retry on 401.
 - Non-2xx becomes `ApiError { status, code, title, detail, errors, retryAfter, traceId, extras }`. UI branches on `code` only.
-- Responses parsed with shared zod schemas (dev: throw on mismatch; prod: report and continue).
+- Responses parsed with shared zod schemas in development and tests (throw on mismatch); production is a
+  typed pass-through so zod stays out of routes without forms (PD-24). Call sites pass
+  `schema: import.meta.env.DEV ? XSchema : undefined`, which production builds remove.
 - Query defaults: GET retries x2 on network/5xx (never 4xx); mutations never auto-retry.
 - Key factory: `qk.slots(from, days, tz)`, `qk.bookings(scope)`, `qk.booking(id)`, `qk.me()`, `qk.students()`, `qk.classroom(token)`, `qk.meta.*`.
 
@@ -397,7 +402,8 @@ nothing imports from `routes/` or `app/`. Enforced with ESLint `import/no-restri
 
 ### 12.4 Performance
 
-- Initial JS <= 180 KB gzip (route-level splitting; classroom, account, auth, reschedule lazy).
+- Initial JS <= 180 KB gzip (route-level splitting; classroom, account, auth, reschedule lazy). `npm run build -w @app/web`
+  fails when the entry plus a route's chunks and modulepreloads exceed it (`scripts/bundle-budget.mjs`).
 - LCP < 2.5s on a mid-range phone, INP < 200ms, CLS < 0.1 (font metric overrides, reserved image boxes,
   skeletons with final dimensions, pending buttons with locked width).
 - Slots prefetched when the landing CTA is hovered or focused; the hero Time Tray query shares the cache with `/book`.

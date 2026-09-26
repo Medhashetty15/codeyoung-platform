@@ -154,3 +154,6 @@
   descent-override: 24.81%;
   line-gap-override: 0%;
 }
+
+/* Solid surfaces instead of translucent ones when the OS asks for it (doc 07 §2.3). */
+@custom-variant reduced-transparency (@media (prefers-reduced-transparency: reduce));

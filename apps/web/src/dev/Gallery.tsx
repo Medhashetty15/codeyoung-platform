@@ -55,7 +55,8 @@ const dates = [
 ];
 const slots = ['4:00 PM', '4:30 PM', '5:00 PM', '6:00 PM', '7:30 PM'];
 
-export function Gallery() {
+/** Dev-only component gallery at /dev/gallery (not part of production builds). */
+export function Component() {
   const { preference, setPreference } = useTheme();
   const [tab, setTab] = useState<'create' | 'login'>('create');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -112,7 +113,9 @@ export function Gallery() {
           <CopyButton
             value="https://app.example/class/abc"
             label="Copy class link"
-            onCopied={() => notify.success('Link copied')}
+            onCopied={() => {
+              notify.success('Link copied');
+            }}
           />
         </div>
       </Section>
@@ -337,7 +340,12 @@ export function Gallery() {
             <MenuSeparator />
             <MenuItem tone="danger">Cancel</MenuItem>
           </Menu>
-          <Button variant="secondary" onClick={() => notify('Trial cancelled')}>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              notify('Trial cancelled');
+            }}
+          >
             Toast
           </Button>
         </div>
