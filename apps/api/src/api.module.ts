@@ -11,8 +11,11 @@ import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/http/jwt-auth.guard';
+import { AvailabilityModule } from './modules/availability/availability.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { HealthModule } from './modules/health/health.module';
+import { MentorsModule } from './modules/mentors/mentors.module';
+import { MetaModule } from './modules/meta/meta.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { StudentsModule } from './modules/students/students.module';
 import { UsersModule } from './modules/users/users.module';
@@ -36,6 +39,9 @@ const DEFAULT_LIMIT_PER_MINUTE = 120;
     AuthModule,
     StudentsModule,
     BookingsModule,
+    MentorsModule,
+    AvailabilityModule,
+    MetaModule,
   ],
   providers: [
     // Global guards run in this order: rate limit first, then authentication (docs/03 §1).
