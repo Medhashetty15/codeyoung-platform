@@ -158,6 +158,19 @@ describe('AppConfig.fromEnv', () => {
     ).toThrow(/COOKIE_SECURE/);
   });
 
+  it('runs production mode on local http only with the explicit opt-in', () => {
+    const config = AppConfig.fromEnv({
+      ...BASE,
+      NODE_ENV: 'production',
+      SMTP_URL: 'smtp://mailpit:1025',
+      COOKIE_SECURE: 'false',
+      ALLOW_INSECURE_COOKIE: 'true',
+    });
+
+    expect(config.isProduction).toBe(true);
+    expect(config.auth.cookieSecure).toBe(false);
+  });
+
   it('keeps refresh tokens within the session cap', () => {
     expect(() =>
       AppConfig.fromEnv({ ...BASE, REFRESH_TTL_DAYS: '14', SESSION_MAX_DAYS: '7' }),

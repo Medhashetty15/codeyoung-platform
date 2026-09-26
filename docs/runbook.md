@@ -37,7 +37,9 @@ docker compose --profile app up --build     # first build takes a few minutes
   volume, which other local work may share.
 - `APP_PORT=8088` (any free port) when 8080 is taken; `JWT_ACCESS_SECRET` overrides the local
   placeholder secret.
-  Safari drops Secure cookies on plain http, so use Chrome or Firefox locally (PD-10).
+- The stack serves plain http, so the refresh cookie is not `Secure` there (`COOKIE_SECURE=false`
+  with the explicit `ALLOW_INSECURE_COOKIE=true` opt-in; the API logs a warning). Every browser,
+  Safari included, can log in. Behind TLS set `COOKIE_SECURE=true` and drop the opt-in.
 
 ## 3. Deploying
 
@@ -45,7 +47,8 @@ docker compose --profile app up --build     # first build takes a few minutes
    `docker build --target web .` (CI builds them on every push).
 2. Required production settings (the process refuses to start otherwise):
    `DATABASE_URL`, `JWT_ACCESS_SECRET` (32+ random characters from the secret store),
-   `SMTP_URL`, `WEB_BASE_URL` (the public origin, used in email links), `COOKIE_SECURE=true`,
+   `SMTP_URL`, `WEB_BASE_URL` (the public origin, used in email links), `COOKIE_SECURE=true` (and
+  no `ALLOW_INSECURE_COOKIE`),
    `RATE_LIMIT_MULTIPLIER` 1 or lower. Set `TRUST_PROXY_HOPS` to the number of proxies in front of
    the API (1 behind the web image alone, 2 with a load balancer in front) so rate limits see
    real client addresses. `MAIL_FROM` must be a sender the SMTP provider accepts.

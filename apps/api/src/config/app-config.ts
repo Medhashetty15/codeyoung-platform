@@ -39,6 +39,8 @@ const envSchema = z
     LOGIN_LOCK_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
     /** Secure flag on the refresh cookie; false only for local http (WebKit drops it). */
     COOKIE_SECURE: z.stringbool().default(true),
+    /** Lets production mode run without Secure cookies: local http demos only (docs/runbook.md). */
+    ALLOW_INSECURE_COOKIE: z.stringbool().default(false),
     TRIAL_DURATION_MIN: z.coerce.number().int().min(15).max(240).default(60),
     SLOT_GRID_MIN: z.coerce.number().int().min(5).max(120).default(30),
     MENTOR_BUFFER_MIN: z.coerce.number().int().min(0).max(120).default(15),
@@ -62,10 +64,13 @@ const envSchema = z
     path: ['RATE_LIMIT_MULTIPLIER'],
     message: 'must not relax rate limits (> 1) in production',
   })
-  .refine((env) => env.NODE_ENV !== 'production' || env.COOKIE_SECURE, {
-    path: ['COOKIE_SECURE'],
-    message: 'must be true in production',
-  })
+  .refine(
+    (env) => env.NODE_ENV !== 'production' || env.COOKIE_SECURE || env.ALLOW_INSECURE_COOKIE,
+    {
+      path: ['COOKIE_SECURE'],
+      message: 'must be true in production (ALLOW_INSECURE_COOKIE=true only for a local http demo)',
+    },
+  )
   .refine((env) => env.NODE_ENV !== 'production' || env.SMTP_URL !== undefined, {
     path: ['SMTP_URL'],
     message: 'is required in production',
