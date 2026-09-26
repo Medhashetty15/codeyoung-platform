@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router';
+import { Navigate, Outlet, useLocation, useSearchParams } from 'react-router';
 
-import { loginPathFor } from './return-to';
+import { loginPathFor, sanitizeReturnTo } from './return-to';
 import { useSessionStatus } from './session-store';
 
 /** Protected routes: skeleton while the boot refresh settles, login with returnTo when anonymous. */
@@ -15,9 +15,15 @@ export function RequireAuth({ fallback }: { fallback: ReactNode }) {
   return <Outlet />;
 }
 
-/** Login, register and password pages: signed-in parents go to My bookings (doc 05 §10). */
+/**
+ * Login, register and password pages: signed-in parents go where they were heading (`returnTo`),
+ * else to My bookings (doc 05 §10). This is also how a successful login leaves the page.
+ */
 export function GuestOnly() {
   const status = useSessionStatus();
-  if (status === 'authenticated') return <Navigate to="/bookings" replace />;
+  const [searchParams] = useSearchParams();
+  if (status === 'authenticated') {
+    return <Navigate to={sanitizeReturnTo(searchParams.get('returnTo')) ?? '/bookings'} replace />;
+  }
   return <Outlet />;
 }
