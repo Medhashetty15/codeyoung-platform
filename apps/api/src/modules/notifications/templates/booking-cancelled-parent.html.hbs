@@ -1,0 +1,9 @@
+<h1>{{childFirstName}}'s trial class is cancelled</h1>
+{{#if byParent}}
+<p>Hi {{parentFirstName}}, as you asked, we cancelled {{childFirstName}}'s trial class with {{mentorFirstName}}.</p>
+{{else}}
+<p>Hi {{parentFirstName}}, we are sorry: we had to cancel {{childFirstName}}'s trial class with {{mentorFirstName}}.</p>
+{{/if}}
+<p class="when">{{when}}</p>
+<p class="actions"><a class="button" href="{{bookUrl}}">Book another time</a></p>
+<p class="muted">The calendar event is removed with the attached update. Booking reference {{reference}}.</p>

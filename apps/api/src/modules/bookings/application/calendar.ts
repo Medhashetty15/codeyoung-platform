@@ -21,6 +21,8 @@ export interface CalendarEvent {
   /** DTSTAMP: when this version of the event was produced. */
   stamp: Temporal.Instant;
   organizer?: { name: string; email: string };
+  /** Invitees of a REQUEST or CANCEL; calendar apps match the event to them. */
+  attendees?: readonly { name: string; email: string }[];
 }
 
 /** Stable event identity: every version of a booking updates the same calendar entry. */
@@ -48,6 +50,15 @@ export function buildCalendar(event: CalendarEvent): string {
     url: event.url,
     status: event.method === 'CANCEL' ? 'CANCELLED' : 'CONFIRMED',
     ...(event.organizer === undefined ? {} : { organizer: event.organizer }),
+    ...(event.attendees === undefined
+      ? {}
+      : {
+          attendees: event.attendees.map((attendee) => ({
+            ...attendee,
+            rsvp: false,
+            role: 'REQ-PARTICIPANT' as const,
+          })),
+        }),
   };
   const { error, value } = createEvent(attributes);
   if (error !== null || value === null) {

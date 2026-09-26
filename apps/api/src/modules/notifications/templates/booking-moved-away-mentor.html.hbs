@@ -1,0 +1,8 @@
+<h1>Trial class with {{childFirstName}} is off your schedule</h1>
+{{#if reassigned}}
+<p>Hi {{mentorFirstName}}, our team moved the trial class with {{childFirstName}} to another mentor. You do not need to join it.</p>
+{{else}}
+<p>Hi {{mentorFirstName}}, {{childFirstName}}'s family moved their trial class to another time, so this class is no longer on your schedule.</p>
+{{/if}}
+<p class="when">{{when}}</p>
+<p class="muted">The calendar event is removed with the attached update. Booking reference {{reference}}.</p>
