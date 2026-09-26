@@ -6,7 +6,7 @@ import { buttonVariants } from '../shared/ui/button-variants';
 import { Sheet } from '../shared/ui/Sheet';
 import { ThemeSwitch } from '../shared/ui/ThemeSwitch';
 
-import { isBookingFlow } from './nav';
+import { isAuthPage, isBookingFlow } from './nav';
 
 const rowClassName =
   'pressable flex h-12 w-full items-center rounded-control px-3 text-body font-medium text-ink hover:bg-sunken active:bg-sunken';
@@ -38,9 +38,11 @@ export function MobileNavSheet({
             </Link>
           </>
         ) : (
-          <Link to="/login" onClick={close} className={rowClassName}>
-            Log in
-          </Link>
+          !isAuthPage(pathname) && (
+            <Link to="/login" onClick={close} className={rowClassName}>
+              Log in
+            </Link>
+          )
         )}
         <div className="flex items-center justify-between gap-3 px-3 py-2">
           <span className="text-body font-medium text-ink">Theme</span>

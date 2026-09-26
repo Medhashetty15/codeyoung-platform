@@ -6,3 +6,8 @@ export function isBookingFlow(pathname: string): boolean {
     /^\/bookings\/[^/]+\/reschedule$/.test(pathname)
   );
 }
+
+/** Login and register pages already are the way in; the header does not repeat "Log in" there. */
+export function isAuthPage(pathname: string): boolean {
+  return pathname === '/login' || pathname === '/register';
+}

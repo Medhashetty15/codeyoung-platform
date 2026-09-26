@@ -23,3 +23,9 @@ export function loginPathFor(returnTo: string): string {
   const safe = sanitizeReturnTo(returnTo);
   return safe && safe !== '/' ? `/login?returnTo=${encodeURIComponent(safe)}` : '/login';
 }
+
+/** Adds `?returnTo=` to an auth link so moving between login, register and reset keeps the destination. */
+export function withReturnTo(path: string, returnTo: string | null | undefined): string {
+  const safe = sanitizeReturnTo(returnTo);
+  return safe ? `${path}?returnTo=${encodeURIComponent(safe)}` : path;
+}

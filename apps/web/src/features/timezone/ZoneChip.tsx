@@ -6,9 +6,9 @@ import { cn } from '../../shared/lib/cn';
 import { GlobeHemisphereWestIcon } from '../../shared/ui/icons';
 
 import { useDisplayZone } from './timezone-context';
+import { loadZonePicker, prefetchZonePicker } from './zone-picker-loader';
 
-const loadPicker = () => import('./ZonePicker');
-const ZonePicker = lazy(() => loadPicker().then((module) => ({ default: module.ZonePicker })));
+const ZonePicker = lazy(() => loadZonePicker().then((module) => ({ default: module.ZonePicker })));
 
 export interface ZoneChipButtonProps extends ComponentPropsWithRef<'button'> {
   zone: string;
@@ -57,7 +57,9 @@ export function ZoneChip({ at }: { at?: InstantLike }) {
     <ZoneChipButton
       zone={zone}
       at={reference}
-      onPointerDown={() => void loadPicker()}
+      onPointerEnter={prefetchZonePicker}
+      onFocus={prefetchZonePicker}
+      onPointerDown={prefetchZonePicker}
       onClick={() => {
         setActive(true);
       }}

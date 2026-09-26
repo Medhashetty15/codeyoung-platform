@@ -1,10 +1,36 @@
-import { PageTitle } from '../shared/ui/PageTitle';
+import { Link, useLocation, useSearchParams } from 'react-router';
 
-/** Log in (doc 05 §9); built in FE-03. */
+import { sanitizeReturnTo, withReturnTo } from '../features/auth';
+import { LoginForm } from '../features/auth/forms';
+import { Notice } from '../shared/ui/Notice';
+import { textLinkClassName } from '../shared/ui/text-link';
+
+import { AuthLayout } from './AuthLayout';
+
+/** /login?returnTo= (doc 05 §9). GuestOnly sends the parent on once the session starts. */
 export function Component() {
+  const [searchParams] = useSearchParams();
+  const returnTo = sanitizeReturnTo(searchParams.get('returnTo'));
+  const { state } = useLocation() as { state: { notice?: string } | null };
+
   return (
-    <div className="mx-auto max-w-content px-4 py-6 sm:py-10">
-      <PageTitle>Log in</PageTitle>
-    </div>
+    <AuthLayout
+      title="Log in"
+      footer={
+        <>
+          New to Codeyoung?{' '}
+          <Link to={withReturnTo('/register', returnTo)} className={textLinkClassName}>
+            Create account
+          </Link>
+        </>
+      }
+    >
+      {state?.notice === 'session-expired' && (
+        <Notice tone="caution" role="status">
+          You were logged out. Log in again to continue.
+        </Notice>
+      )}
+      <LoginForm returnTo={returnTo} />
+    </AuthLayout>
   );
 }
