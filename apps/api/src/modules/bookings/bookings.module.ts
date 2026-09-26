@@ -11,8 +11,10 @@ import { UsersModule } from '../users/users.module';
 
 import { BookingPlacer } from './application/booking-placer';
 import { BookingViews } from './application/booking-views';
+import { CancelBookingService } from './application/cancel-booking.service';
 import { CreateBookingService } from './application/create-booking.service';
 import { MentorLoads } from './application/mentor-loads';
+import { RescheduleBookingService } from './application/reschedule-booking.service';
 import { BookingsReadModule } from './bookings-read.module';
 import { BookingsController } from './http/bookings.controller';
 import { BookingEventsRepository } from './infra/booking-events.repository';
@@ -36,6 +38,8 @@ import { BookingsRepository } from './infra/bookings.repository';
     BookingPlacer,
     BookingViews,
     CreateBookingService,
+    CancelBookingService,
+    RescheduleBookingService,
     MentorLoads,
     KeyedRateLimiter,
   ],
