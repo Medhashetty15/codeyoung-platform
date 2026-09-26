@@ -14,6 +14,7 @@ import { BookingCancelCommand } from './modules/ops-cli/bookings/booking-cancel.
 import { BookingListCommand } from './modules/ops-cli/bookings/booking-list.command';
 import { BookingReassignCommand } from './modules/ops-cli/bookings/booking-reassign.command';
 import { ConfigPrintCommand } from './modules/ops-cli/config-print.command';
+import { DbCreateCommand } from './modules/ops-cli/database/db-create.command';
 import { DbDriftCommand } from './modules/ops-cli/database/db-drift.command';
 import { DbMigrateCommand } from './modules/ops-cli/database/db-migrate.command';
 import { DbRevertCommand } from './modules/ops-cli/database/db-revert.command';
@@ -56,6 +57,7 @@ import { WaitlistModule } from './modules/waitlist/waitlist.module';
     DatabaseSeeder,
     E2eScenarioSeeder,
     ConfigPrintCommand,
+    DbCreateCommand,
     DbMigrateCommand,
     DbRevertCommand,
     DbDriftCommand,
