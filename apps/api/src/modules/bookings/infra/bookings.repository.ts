@@ -213,4 +213,32 @@ export class BookingsRepository {
       .where('id = :id', { id })
       .execute();
   }
+
+  /**
+   * Marks up to `limit` confirmed classes that ended before `endedBefore` as
+   * COMPLETED, with an audit event each. SKIP LOCKED leaves rows another
+   * transaction is changing for the next run.
+   */
+  async completeEnded(
+    endedBefore: Temporal.Instant,
+    at: Temporal.Instant,
+    limit: number,
+  ): Promise<number> {
+    const rows = await this.manager.query<unknown[]>(
+      `WITH completed AS (
+         UPDATE bookings SET status = 'COMPLETED', updated_at = $2
+          WHERE id IN (
+            SELECT id FROM bookings
+             WHERE status = 'CONFIRMED' AND ends_at < $1
+             ORDER BY ends_at
+             LIMIT $3
+             FOR UPDATE SKIP LOCKED)
+          RETURNING id)
+       INSERT INTO booking_events (booking_id, type, actor, created_at)
+       SELECT id, 'COMPLETED', 'system:worker', $2 FROM completed
+       RETURNING booking_id`,
+      [toDate(endedBefore), toDate(at), limit],
+    );
+    return rows.length;
+  }
 }
