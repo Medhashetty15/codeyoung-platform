@@ -1,6 +1,7 @@
 import { type NestApplicationOptions } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 
@@ -39,6 +40,8 @@ export function configureHttpApp(app: NestExpressApplication): void {
   app.use(helmet());
   // Nest's own parser is disabled (HTTP_APP_OPTIONS) so limits and error details are ours.
   app.use(jsonBodyParser(), translateBodyErrors);
+  // The refresh token cookie (docs/03 §6.1); unsigned, it is an opaque random value.
+  app.use(cookieParser());
   app.enableCors({
     origin: [...config.corsOrigins],
     credentials: true,

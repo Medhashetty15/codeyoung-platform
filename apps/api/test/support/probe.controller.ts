@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { ErrorCode, IanaZoneSchema } from '@app/contracts';
 
+import { Public } from '../../src/common/auth/public.decorator';
 import { AppError } from '../../src/common/errors/app-error';
 
 class ProbeBodyDto extends createZodDto(
@@ -16,6 +17,7 @@ class ProbeBodyDto extends createZodDto(
 class ProbeZoneDto extends createZodDto(z.object({ timezone: IanaZoneSchema })) {}
 
 /** Test-only routes that trigger each error path of the HTTP pipeline. */
+@Public()
 @Controller('__probe')
 export class ProbeController {
   @Post('validate')
