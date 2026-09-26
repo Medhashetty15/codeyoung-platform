@@ -8,6 +8,7 @@ and emails both sides. Design docs live in [`docs/`](docs/README.md).
 | Path                 | What                                                              |
 | -------------------- | ----------------------------------------------------------------- |
 | `apps/api`           | NestJS 11 API, background worker and ops CLI (three entry points) |
+| `apps/web`           | React 19 + Vite web app, design system and component gallery      |
 | `packages/contracts` | `@app/contracts`: shared zod schemas, types and error codes       |
 | `packages/time`      | `@app/time`: Temporal-based time zone and DST helpers             |
 | `infra/`             | Local infrastructure support files (database init script)         |
@@ -23,7 +24,7 @@ Prerequisites: Node 22 (`nvm use`), npm 10, Docker.
 npm install
 npm run infra:up                           # PostgreSQL 17 on :5433, Mailpit on :1025 / :8025
 cp apps/api/.env.example apps/api/.env     # local settings; real env vars always win
-npm run dev                                # builds packages, then watches packages + API + worker
+npm run dev                                # builds packages, then watches packages + API + worker + web
 curl localhost:3000/api/v1/health/ready    # {"status":"ok",...}
 ```
 
@@ -35,11 +36,25 @@ curl localhost:3000/api/v1/health/ready    # {"status":"ok",...}
 PostgreSQL and one Mailpit. The init script creates `codeyoung_dev` (backend, API on 3000),
 `codeyoung_fe` (frontend's API instance on 3001) and `codeyoung_test`.
 
+## Quick start (web)
+
+```sh
+npm install
+cp apps/web/.env.example apps/web/.env   # optional: VITE_API_PROXY_TARGET (default http://localhost:3001)
+npm run dev:web                          # http://localhost:5173, /api proxied to the API
+```
+
+- Component gallery (development only): `http://localhost:5173/dev/gallery`, every component and
+  state in both themes. The theme switch sits in its header.
+- `npm run icons -w @app/web` regenerates the icon components after adding a name to
+  `apps/web/scripts/generate-icons.mjs`; a unit test fails if the committed file is stale.
+- Design rules live in [docs/07](docs/07-design-system.md); screens and architecture in [docs/05](docs/05-frontend-design.md).
+
 ## Scripts (root)
 
 | Script                            | What it does                                                    |
 | --------------------------------- | --------------------------------------------------------------- |
-| `npm run dev`                     | Build packages, then watch packages, API and worker             |
+| `npm run dev`                     | Build packages, then watch packages, API, worker and web        |
 | `npm run build`                   | Build every workspace (packages first)                          |
 | `npm run lint` / `lint:fix`       | ESLint, zero warnings allowed                                   |
 | `npm run format` / `format:check` | Prettier                                                        |
@@ -77,3 +92,15 @@ Validated with zod at boot; the process refuses to start on invalid values. See
   import NestJS or TypeORM.
 - Every error response is RFC 7807 `application/problem+json` with a stable `code` and `traceId`
   (docs/03 §9).
+
+## Credits
+
+| Asset                                                                                                   | Source                                                                                                                            | Licence                                           |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Photo: child in a live class ([`apps/web/src/assets/photos/trial-class-*`](apps/web/src/assets/photos)) | Katerina Holmes, [Pexels](https://www.pexels.com/photo/ethnic-girl-having-video-chat-with-teacher-online-on-laptop-5905709/)      | [Pexels License](https://www.pexels.com/license/) |
+| Photo: parent and child at a laptop (`parent-and-child-*`)                                              | Timur Weber, [Pexels](https://www.pexels.com/photo/father-and-son-sitting-on-the-floor-9127073/)                                  | [Pexels License](https://www.pexels.com/license/) |
+| Icons                                                                                                   | [Phosphor Icons](https://phosphoricons.com) (`@phosphor-icons/core`)                                                              | MIT, Copyright (c) 2023 Phosphor Icons            |
+| Fonts                                                                                                   | [Figtree](https://github.com/erikdkennedy/figtree), [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) (via Fontsource) | SIL Open Font License 1.1                         |
+
+Photos are cropped and re-encoded (AVIF, WebP, JPEG) with metadata stripped; the people shown are
+stock models, not Codeyoung families or mentors.

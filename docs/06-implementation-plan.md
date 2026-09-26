@@ -66,7 +66,9 @@ reschedule is atomic.
 
 ## M7 — Frontend
 
-Built against the real API (MSW only in component tests). Slices, each shippable:
+Component tests always use MSW handlers built from `@app/contracts` fixtures; the dev server can opt in
+to the same handlers with `VITE_API_MOCKS=1` while an endpoint is not merged yet (default: real API);
+Playwright e2e always runs against the real API. Slices, each shippable:
 
 0. **Design system** — tokens (both themes), motion tokens, mobile baseline, fonts, `shared/ui` components
    from doc 07 §6 with a local component gallery route (dev only).

@@ -56,6 +56,7 @@ Green reads as growth and learning, and as "go / confirmed", which is exactly th
 | `--accent-ink` | Forest ink | `#0F4E39` | Text on accent tint | 8.5:1 on tint |
 | `--danger` | Brick | `#B42318` | Errors, destructive actions | 6.5:1 on surface |
 | `--danger-tint` | Brick wash | `#FDECEA` | Error banners | |
+| `--on-danger` | On brick | `#FFFFFF` | Text on danger fills (danger button) | 6.5:1 on danger |
 | `--caution` | Amber ink | `#8A4B08` | Zone-mismatch warnings | 6.2:1 on tint |
 | `--caution-tint` | Amber wash | `#FEF3E2` | Warning banners | |
 
@@ -76,6 +77,7 @@ Green reads as growth and learning, and as "go / confirmed", which is exactly th
 | `--accent-tint` | `#12291F` | |
 | `--accent-ink` | `#7FDDB5` | |
 | `--danger` / `--danger-tint` | `#F97066` / `#2A1413` | |
+| `--on-danger` | `#1F0A08` | Dark text on the coral danger fill |
 | `--caution` / `--caution-tint` | `#FDB022` / `#2A1E0A` | |
 
 ### 2.3 Rules
@@ -94,7 +96,7 @@ Green reads as growth and learning, and as "go / confirmed", which is exactly th
 
 | Role | Face | Why |
 |------|------|-----|
-| Display + UI | **Satoshi Variable** (Fontshare, free commercial licence), self-hosted woff2 | Geometric but humane; warmer than Geist, less generic than Inter / Plus Jakarta. Reads well at small sizes on phones. |
+| Display + UI | **Figtree Variable** (SIL OFL 1.1, `@fontsource-variable/figtree`, bundled) | Geometric but humane; warmer than Geist, less generic than Inter / Plus Jakarta. Reads well at small sizes on phones. Replaced Satoshi for licence reasons ([ADR 0016](adr/0016-replace-satoshi-with-figtree.md)). |
 | Mono (reference codes only) | **JetBrains Mono** (`@fontsource-variable/jetbrains-mono`) | `CY-7K3Q9P` must be unambiguous when read over the phone. |
 
 Banned: Inter, Roboto, Open Sans, Arial as the brand face; any serif (this is product UI, not editorial).
@@ -114,10 +116,10 @@ Banned: Inter, Roboto, Open Sans, Arial as the brand face; any serif (this is pr
 
 - Hierarchy through **weight and colour before size** (apple-design §15).
 - **Times, dates, countdowns: `font-variant-numeric: tabular-nums`** so times in a grid align and
-  countdown digits don't jitter. Verify Satoshi's `tnum`; if absent, countdown digits fall back to JetBrains Mono.
+  countdown digits don't jitter. Figtree's `tnum` feature is verified in the font file.
 - Body copy max 65ch. Inputs always 16px (prevents iOS zoom).
 - Font loading: preload the variable woff2, `font-display: swap`, fallback `@font-face` with
-  `size-adjust`/`ascent-override` tuned to Satoshi so the swap causes no layout shift (CLS < 0.1).
+  `size-adjust`/`ascent-override` computed from the Figtree and Arial files so the swap causes no layout shift (CLS < 0.1).
 
 ## 4. Space, layout, shape, depth
 
@@ -142,7 +144,8 @@ Banned: Inter, Roboto, Open Sans, Arial as the brand face; any serif (this is pr
 
 ## 5. Iconography & imagery
 
-- **Icons: Phosphor** (`@phosphor-icons/react`), weight `regular`, 20px default, 16px in dense rows.
+- **Icons: Phosphor**, weight `regular` only, 20px default, 16px in dense rows. Components are generated from
+  `@phosphor-icons/core` SVGs (`npm run icons -w @app/web`); the React package ships all six weights per icon.
   One family only. No hand-drawn SVG icons. Lucide is not used.
 - **No emojis** anywhere in UI, copy or emails.
 - **Avatars:** mentor and parent initials on a neutral disc. No generic person glyphs.
@@ -159,12 +162,12 @@ and `--transform-origin` for motion). Variants via **cva**, conditional classes 
 
 | Component | Spec |
 |-----------|------|
-| **Button** | Heights 44 (default) / 36 (compact, desktop only). Variants: `primary` (accent fill, white text), `secondary` (surface, `--line-control` border, ink text), `ghost` (text only, sunken on hover), `danger`. Label one line, sentence case, max 3 words for primaries. Pending state: label stays, a 14px inline spinner replaces the leading icon, width locked (no layout jump). `:active` scale 0.97. |
+| **Button** | Heights 44 (default) / 36 (compact, desktop only). Variants: `primary` (accent fill, white text), `secondary` (surface, `--line-control` border, ink text), `ghost` (text only, sunken on hover), `danger`. Label one line, sentence case, max 3 words for primaries. Pending state: label stays, a 14px inline spinner replaces the leading icon, width locked (no layout jump). Disabled: sunken fill + faint ink for every variant (never reduced opacity, which reads as another colour). `:active` scale 0.97. |
 | **Input / Select / Textarea** | Label above, helper below label, error below input with icon. 44px height, 16px text, `--line-control` border, focus: 2px accent ring + 2px offset. No placeholder-as-label. Correct `type`, `autocomplete`, `inputmode`, `enterkeyhint`. |
 | **Password field** | Show/hide toggle (button with `aria-pressed`), live policy checklist (length, not common, not your email) that turns each rule accent when met. |
 | **Zone chip** | Pill, Phosphor `GlobeHemisphereWest` + "London time (GMT+1)". Opens the Zone picker. |
 | **Zone picker** | Base UI Combobox in a Popover (desktop) or bottom sheet (mobile). Pinned groups: United States, United Kingdom, India; then all zones. Search by city, country, abbreviation or offset. Each row: zone label + current offset for the dates being viewed. |
-| **Date chip** | 64x72 control: weekday (micro), day number (h2, tabular), availability line ("4 times" / "Full" / "No classes"). States: default, selected (ink fill, canvas text), muted (unavailable, still focusable to show the day notice). |
+| **Date chip** | 72px high, 64px minimum width (grows for "No classes"): weekday (micro), day number (h2, tabular), availability line ("4 times" / "Full" / "No classes"). States: default, selected (ink fill, canvas text), muted (unavailable, still focusable to show the day notice). |
 | **Slot chip** | 48px high, time in tabular figures. States: default (surface + control edge), hover (sunken), selected (accent tint + accent edge + check icon), focus ring. |
 | **Time Tray** | See §4. Header: zone chip. Body: time in `time-xl`, date in `h3`, "60 min live class". Footer: primary action. |
 | **Stepper** | Three labelled states, text first: "Time", "Account", "Confirm". Done = check icon + ink, current = accent underline, upcoming = faint. No "Step 1 of 3" labels. |
@@ -175,7 +178,7 @@ and `--transform-origin` for motion). Variants via **cva**, conditional classes 
 | **Accordion** | FAQ only. No boxes, `--line` bottom border per item, plus/minus icon. |
 | **Skeleton** | Same shapes as the final layout (date chips, slot grid, booking rows). Subtle shimmer (see motion). No circular spinners for page loads. |
 | **Empty state** | Icon (32px, muted), one-line title, one sentence, one action. Composed, left-aligned inside its panel. |
-| **Toast** | Sonner, one `<Toaster />` at root, bottom-center on mobile (above the sticky bar and safe area), bottom-right on desktop, `theme` wired to our theme, headless custom rendering using our Notice styling. Only for transient confirmations ("Link copied", "Booking cancelled"). |
+| **Toast** | Sonner, one `<Toaster />` at root, bottom-center on mobile (above the sticky bar and safe area), bottom-right on desktop, `theme` wired to our theme, headless custom rendering using our Notice styling. Only for transient confirmations ("Link copied", "Trial cancelled"). |
 | **Countdown** | NumberFlow digits (`@number-flow/react`), tabular, respects reduced motion. |
 
 ## 7. Motion
