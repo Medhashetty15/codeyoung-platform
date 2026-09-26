@@ -80,18 +80,25 @@ CI (`.github/workflows/ci.yml`) runs lint, format, typecheck, unit and integrati
 Validated with zod at boot; the process refuses to start on invalid values. See
 [`apps/api/.env.example`](apps/api/.env.example) for every key with its default.
 
-| Key                     | Default                  | Meaning                                               |
-| ----------------------- | ------------------------ | ----------------------------------------------------- |
-| `NODE_ENV`              | `development`            | `development`, `test` or `production`                 |
-| `PORT`                  | `3000`                   | HTTP port                                             |
-| `DATABASE_URL`          | (required)               | PostgreSQL connection string                          |
-| `WEB_BASE_URL`          | `http://localhost:5173`  | Web app origin: email links and default CORS origin   |
-| `CORS_ORIGINS`          | web origin               | Comma-separated CORS allow-list                       |
-| `LOG_LEVEL`             | `info`                   | Pino level (`silent` in tests)                        |
-| `LOG_PRETTY`            | `true` in development    | Human-readable logs instead of JSON                   |
-| `TRUST_PROXY_HOPS`      | `0`                      | Reverse-proxy hops trusted for client IPs             |
-| `RATE_LIMIT_MULTIPLIER` | `1`                      | Scales every rate limit (e2e); must be `<= 1` in prod |
-| `SEED_DEMO_PASSWORD`    | `violet-harbour-lantern` | Demo parent password for `db:seed` (never production) |
+| Key                                           | Default                  | Meaning                                                       |
+| --------------------------------------------- | ------------------------ | ------------------------------------------------------------- |
+| `NODE_ENV`                                    | `development`            | `development`, `test` or `production`                         |
+| `PORT`                                        | `3000`                   | HTTP port                                                     |
+| `DATABASE_URL`                                | (required)               | PostgreSQL connection string                                  |
+| `WEB_BASE_URL`                                | `http://localhost:5173`  | Web app origin: email links and default CORS origin           |
+| `CORS_ORIGINS`                                | web origin               | Comma-separated CORS allow-list                               |
+| `LOG_LEVEL`                                   | `info`                   | Pino level (`silent` in tests)                                |
+| `LOG_PRETTY`                                  | `true` in development    | Human-readable logs instead of JSON                           |
+| `TRUST_PROXY_HOPS`                            | `0`                      | Reverse-proxy hops trusted for client IPs                     |
+| `RATE_LIMIT_MULTIPLIER`                       | `1`                      | Scales every rate limit (e2e); must be `<= 1` in prod         |
+| `SEED_DEMO_PASSWORD`                          | `violet-harbour-lantern` | Demo parent password for `db:seed` (never production)         |
+| `JWT_ACCESS_SECRET`                           | (required)               | HS256 key for access tokens, at least 32 characters           |
+| `JWT_ACCESS_TTL_SEC`                          | `900`                    | Access token lifetime                                         |
+| `REFRESH_TTL_DAYS` / `SESSION_MAX_DAYS`       | `7` / `30`               | Refresh token lifetime / absolute session cap                 |
+| `REFRESH_REUSE_GRACE_SEC`                     | `20`                     | Parallel-tab window before a reused token revokes the session |
+| `PASSWORD_RESET_TTL_MIN`                      | `30`                     | Reset link lifetime                                           |
+| `LOGIN_LOCK_THRESHOLD` / `LOGIN_LOCK_MINUTES` | `10` / `15`              | Failures per window before a temporary lock                   |
+| `COOKIE_SECURE`                               | `true`                   | Secure refresh cookie; `false` only for local http            |
 
 ## Conventions that CI enforces
 

@@ -92,6 +92,7 @@ CREATE TABLE users (
   timezone               text        NOT NULL,                 -- IANA
   role                   text        NOT NULL DEFAULT 'PARENT' CHECK (role IN ('PARENT')),  -- extensible
   failed_login_attempts  int         NOT NULL DEFAULT 0,
+  failed_login_window_started_at timestamptz,                  -- first failure of the lockout window
   locked_until           timestamptz,
   password_changed_at    timestamptz NOT NULL DEFAULT now(),
   last_login_at          timestamptz,
@@ -417,9 +418,9 @@ also require the header `X-Requested-With: cy-web` (forces a CORS preflight) →
 | Flow | Behaviour |
 |------|-----------|
 | Register | Validate; password policy; argon2id hash; create user + session + refresh token; `201` with access token + cookie. Existing email → `409 EMAIL_ALREADY_REGISTERED`. |
-| Login | Rate-limited. Unknown email → verify against a dummy hash (equal timing) → `401 INVALID_CREDENTIALS`. Wrong password → increment counter; ≥ 10 failures within 15 min → `locked_until = now + 15 min` → `429 ACCOUNT_TEMPORARILY_LOCKED` + `Retry-After`. Success → reset counter, rehash if argon2 params changed, new session. |
-| Refresh | Look up token hash `FOR UPDATE`. Missing/expired/session revoked → `401`. Already used: within **20 s** grace (parallel tabs) → issue a new token in the same session; beyond → revoke session (`REUSE_DETECTED`), log security event, `401 REFRESH_TOKEN_REUSED`. Otherwise mark used, issue new token + access token. |
-| Logout | Cookie-authenticated; revoke current session; clear cookie. Idempotent `204`. |
+| Login | Rate-limited. Unknown email → verify against a dummy hash (equal timing) → `401 INVALID_CREDENTIALS`. Wrong password → count it in a 15-minute window that starts at the first failure; the 10th failure in the window sets `locked_until = now + 15 min` and already answers `429 ACCOUNT_TEMPORARILY_LOCKED` + `Retry-After`. While locked, attempts are refused before the password is checked and do not extend the lock. Success → reset counters, rehash if argon2 params changed, new session. The user row is locked (`FOR UPDATE`) during the check so parallel attempts count correctly; the failure is committed before the error is returned. |
+| Refresh | Requires `X-Requested-With: cy-web` (missing → `400 VALIDATION_FAILED`). Lock token then session (`FOR UPDATE`, always that order). Missing/expired token, revoked session or session past its 30-day cap → `401 REFRESH_TOKEN_INVALID`. Already used: within **20 s** grace (parallel tabs) → issue a new token in the same session; beyond → revoke session (`REUSE_DETECTED`, committed), log security event, `401 REFRESH_TOKEN_REUSED`. Otherwise mark used, issue new token (expiry capped at the session end) + access token. Failed refreshes clear the cookie. |
+| Logout | Cookie-authenticated (`X-Requested-With` required); revoke current session; clear cookie. Idempotent `204`. |
 | Forgot password | Always `202`. If user exists: invalidate previous unused reset tokens, create new (30 min), outbox `PasswordResetRequested`. |
 | Reset password | Valid, unused, unexpired token → set new hash, mark used, revoke **all** sessions, outbox `PasswordChanged` (security notice). Else `400 RESET_TOKEN_INVALID`. |
 | Change password | Bearer + current password → new hash, revoke all **other** sessions, `PasswordChanged` email. |
@@ -676,14 +677,14 @@ Actor recorded in `booking_events` as `ops:<os-user>`.
 | `WEB_BASE_URL` | `http://localhost:5173` | Links in emails, default CORS origin |
 | `CORS_ORIGINS` | web origin | Comma-separated CORS allow-list |
 | `SMTP_URL`, `MAIL_FROM` | Mailpit / `Codeyoung <trials@codeyoung.dev>` | Mail |
-| `JWT_ACCESS_SECRET` | — (≥ 32 bytes) | HS256 key |
+| `JWT_ACCESS_SECRET` | — (≥ 32 characters) | HS256 key |
 | `JWT_ACCESS_TTL_SEC` | 900 | 15 min |
 | `REFRESH_TTL_DAYS` | 7 | Per token |
 | `SESSION_MAX_DAYS` | 30 | Absolute session cap |
 | `REFRESH_REUSE_GRACE_SEC` | 20 | Parallel-tab grace |
 | `PASSWORD_RESET_TTL_MIN` | 30 | |
 | `LOGIN_LOCK_THRESHOLD` / `LOGIN_LOCK_MINUTES` | 10 / 15 | Lockout |
-| `COOKIE_SECURE` | `true` in prod | |
+| `COOKIE_SECURE` | `true` | Secure flag on `cy_rt`; must be `true` in production, `false` for local http (WebKit drops Secure cookies, PD-10) |
 | `TRIAL_DURATION_MIN` | 60 | |
 | `SLOT_GRID_MIN` | 30 | |
 | `MENTOR_BUFFER_MIN` | 15 | |
