@@ -9,6 +9,9 @@ and emails both sides. Design docs live in [`docs/`](docs/README.md).
 docker compose --profile app up --build   # PostgreSQL, Mailpit, migrate + demo data, API, worker, web
 ```
 
+If port 8080 is taken, choose another: `APP_PORT=8088 docker compose --profile app up --build`
+(then open that port instead).
+
 Open http://localhost:8080 and book a trial as the demo parent `hannah.okafor@example.com` /
 `violet-harbour-lantern` (local seed data only), or register. Every email lands in Mailpit at
 http://localhost:8025. The API and worker run in production mode behind Caddy, which serves the
