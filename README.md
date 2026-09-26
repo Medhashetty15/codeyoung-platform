@@ -3,6 +3,57 @@
 Parents book a free trial class in their own time zone; the system assigns an available mentor
 and emails both sides. Design docs live in [`docs/`](docs/README.md).
 
+## How it meets the brief
+
+| Requirement                        | How                                                                                                                                                                                                                                | Where                                                                                                |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 10 mentors, about 20 parents a day | Seeded with 10 mentors in India (evening and night windows that suit US and UK families). Supply equals demand (10 x 2 = 20 a day), so full days and lost races are the common path, not edge cases.                               | [docs/01 §2](docs/01-requirements.md), `npm run db:seed`                                             |
+| Local times for both sides         | Every time is a UTC instant plus an IANA zone. Parents see their zone (zone chip, changeable); each email is written in its recipient's zone with name and offset ("5:00 to 6:00 PM London time (GMT+1)"), with a calendar invite. | [ADR 0002](docs/adr/0002-utc-instants-and-iana-zones.md), [docs/04 §5](docs/04-timezones-and-dst.md) |
+| Daylight saving                    | Temporal with an explicit policy for skipped and repeated local times; the 2026 US/UK mismatch weeks are pinned in tests; the picker warns when clocks change inside the visible dates.                                            | [docs/04](docs/04-timezones-and-dst.md), [ADR 0003](docs/adr/0003-temporal-api-for-zone-math.md)     |
+| Dummy class link                   | Each booking has a personal join token per participant; `/class/:token` opens a demo classroom with the time in the viewer's zone and a countdown.                                                                                 | [docs/03 §8](docs/03-backend-design.md)                                                              |
+| At most 2 classes a mentor a day   | Per-mentor row lock around every capacity change plus a database exclusion constraint against overlaps; parallel race tests prove exactly k of N requests win.                                                                     | [ADR 0004](docs/adr/0004-db-enforced-booking-invariants.md), `apps/api/test/bookings.int-spec.ts`    |
+| No mentor available                | Days show available, fully booked or no classes, plus the next free time; a lost race answers 409 with the 3 nearest alternatives; an empty horizon offers a waitlist; ops can reassign or cancel with emails.                     | [docs/01 §2](docs/01-requirements.md), [docs/runbook.md](docs/runbook.md)                            |
+
+## Highlights
+
+- Correct under concurrency: capacity rules live in the database (row locks, exclusion constraint,
+  partial unique indexes), so double booking and cap overruns cannot happen even under parallel requests.
+- Idempotent booking: a retried or double-clicked request with the same `Idempotency-Key` returns
+  the same booking; a lost race gets alternatives instead of an error dead end.
+- Emails through a transactional outbox: written in the same transaction as the booking, sent by a
+  worker with retries, backoff, dead letters and no duplicates; reminders skip changed bookings.
+- Security: argon2id passwords, rotating refresh tokens with reuse detection and lockout, strict
+  Content-Security-Policy (hashes only, no `unsafe-inline`), secrets and join links redacted from logs.
+- Accessibility: axe finds no serious or critical issues on any route, in both themes.
+- Tests: 656 unit, 237 integration (real PostgreSQL and Mailpit), 12 end-to-end in two time zones
+  including the real emails; CI runs them under `TZ=UTC` and `TZ=America/New_York` and builds the
+  Docker images.
+
+## Scope and trade-offs
+
+The MVP is the parent product (browse, book, manage, classroom, waitlist) plus an ops CLI; there
+is no mentor or admin UI. Deliberate trade-offs:
+
+- No slot holds while a parent completes the form; a lost race is handled with alternatives
+  ([ADR 0013](docs/adr/0013-no-slot-holds-url-driven-wizard.md)).
+- Stateless 15-minute access tokens: a revoked session keeps working until its token expires
+  ([ADR 0007](docs/adr/0007-jwt-access-and-rotating-refresh-tokens.md)).
+- No email verification yet; booking details are shown on screen and in "My bookings".
+- Ops work through a CLI instead of an admin UI
+  ([ADR 0008](docs/adr/0008-ops-cli-instead-of-admin-ui.md)).
+- Mentors are assigned least-loaded first, which balances work but does not yet protect scarce
+  hours ([ADR 0011](docs/adr/0011-least-loaded-assignment-strategy.md)).
+
+## Next steps
+
+- Mentor portal: own schedule, time off and class notes.
+- Admin UI on the same services the CLI uses.
+- Email verification at sign-up.
+- Scarcity-aware assignment (keep mentors who cover rare hours free for them).
+- SMS or WhatsApp reminders.
+- Translations and localised formats (i18n).
+- Metrics and tracing (booking funnel, email delivery, lock waits).
+
 ## Run it (Docker only)
 
 ```sh
@@ -15,7 +66,8 @@ If port 8080 is taken, choose another: `APP_PORT=8088 docker compose --profile a
 Open http://localhost:8080 and book a trial as the demo parent `hannah.okafor@example.com` /
 `violet-harbour-lantern` (local seed data only), or register. Every email lands in Mailpit at
 http://localhost:8025. The API and worker run in production mode behind Caddy, which serves the
-web app and proxies `/api`. Use Chrome or Firefox (Safari drops Secure cookies on plain http).
+web app and proxies `/api`. It serves plain http, so the demo's refresh cookie is not `Secure`
+(any browser, Safari included, can log in); behind TLS set `COOKIE_SECURE=true`.
 Details, ops commands and deployment: [docs/runbook.md](docs/runbook.md).
 
 ## Repository layout
@@ -156,32 +208,33 @@ need Docker: Testcontainers starts PostgreSQL 17 and Mailpit.
 Validated with zod at boot; the process refuses to start on invalid values. See
 [`apps/api/.env.example`](apps/api/.env.example) for every key with its default.
 
-| Key                                                          | Default                            | Meaning                                                       |
-| ------------------------------------------------------------ | ---------------------------------- | ------------------------------------------------------------- |
-| `NODE_ENV`                                                   | `development`                      | `development`, `test` or `production`                         |
-| `PORT`                                                       | `3000`                             | HTTP port                                                     |
-| `DATABASE_URL`                                               | (required)                         | PostgreSQL connection string                                  |
-| `WEB_BASE_URL`                                               | `http://localhost:5173`            | Web app origin: email links and default CORS origin           |
-| `CORS_ORIGINS`                                               | web origin                         | Comma-separated CORS allow-list                               |
-| `LOG_LEVEL`                                                  | `info`                             | Pino level (`silent` in tests)                                |
-| `LOG_PRETTY`                                                 | `true` in development              | Human-readable logs instead of JSON                           |
-| `TRUST_PROXY_HOPS`                                           | `0`                                | Reverse-proxy hops trusted for client IPs                     |
-| `RATE_LIMIT_MULTIPLIER`                                      | `1`                                | Scales every rate limit (e2e); must be `<= 1` in prod         |
-| `SEED_DEMO_PASSWORD`                                         | `violet-harbour-lantern`           | Demo parent password for `db:seed` (never production)         |
-| `JWT_ACCESS_SECRET`                                          | (required)                         | HS256 key for access tokens, at least 32 characters           |
-| `JWT_ACCESS_TTL_SEC`                                         | `900`                              | Access token lifetime                                         |
-| `REFRESH_TTL_DAYS` / `SESSION_MAX_DAYS`                      | `7` / `30`                         | Refresh token lifetime / absolute session cap                 |
-| `REFRESH_REUSE_GRACE_SEC`                                    | `20`                               | Parallel-tab window before a reused token revokes the session |
-| `PASSWORD_RESET_TTL_MIN`                                     | `30`                               | Reset link lifetime                                           |
-| `LOGIN_LOCK_THRESHOLD` / `LOGIN_LOCK_MINUTES`                | `10` / `15`                        | Failures per window before a temporary lock                   |
-| `COOKIE_SECURE`                                              | `true`                             | Secure refresh cookie; `false` only for local http            |
-| `TRIAL_DURATION_MIN` / `SLOT_GRID_MIN` / `MENTOR_BUFFER_MIN` | `60` / `30` / `15`                 | Class length, UTC slot grid, changeover after each class      |
-| `BOOKING_LEAD_TIME_MIN` / `BOOKING_HORIZON_DAYS`             | `240` / `14`                       | Bookable window, counted from the server clock                |
-| `RESCHEDULE_CUTOFF_MIN` / `DEFAULT_MAX_TRIALS_PER_DAY`       | `120` / `2`                        | Reschedule cutoff, default mentor daily cap                   |
-| `CLASSROOM_OPENS_MIN_BEFORE` / `MENTOR_DISPLAY_TIMEZONE`     | `10` / `Asia/Kolkata`              | Classroom opening, mentor zone shown in the UI                |
-| `SMTP_URL`                                                   | `smtp://localhost:1025`            | Outgoing mail (Mailpit locally); required in production       |
-| `MAIL_FROM`                                                  | `Codeyoung <trials@codeyoung.dev>` | Sender and calendar invite organizer                          |
-| `OUTBOX_POLL_MS` / `OUTBOX_MAX_ATTEMPTS`                     | `2000` / `8`                       | Worker poll interval / attempts before a message is `DEAD`    |
+| Key                                                          | Default                            | Meaning                                                               |
+| ------------------------------------------------------------ | ---------------------------------- | --------------------------------------------------------------------- |
+| `NODE_ENV`                                                   | `development`                      | `development`, `test` or `production`                                 |
+| `PORT`                                                       | `3000`                             | HTTP port                                                             |
+| `DATABASE_URL`                                               | (required)                         | PostgreSQL connection string                                          |
+| `WEB_BASE_URL`                                               | `http://localhost:5173`            | Web app origin: email links and default CORS origin                   |
+| `CORS_ORIGINS`                                               | web origin                         | Comma-separated CORS allow-list                                       |
+| `LOG_LEVEL`                                                  | `info`                             | Pino level (`silent` in tests)                                        |
+| `LOG_PRETTY`                                                 | `true` in development              | Human-readable logs instead of JSON                                   |
+| `TRUST_PROXY_HOPS`                                           | `0`                                | Reverse-proxy hops trusted for client IPs                             |
+| `RATE_LIMIT_MULTIPLIER`                                      | `1`                                | Scales every rate limit (e2e); must be `<= 1` in prod                 |
+| `SEED_DEMO_PASSWORD`                                         | `violet-harbour-lantern`           | Demo parent password for `db:seed` (never production)                 |
+| `JWT_ACCESS_SECRET`                                          | (required)                         | HS256 key for access tokens, at least 32 characters                   |
+| `JWT_ACCESS_TTL_SEC`                                         | `900`                              | Access token lifetime                                                 |
+| `REFRESH_TTL_DAYS` / `SESSION_MAX_DAYS`                      | `7` / `30`                         | Refresh token lifetime / absolute session cap                         |
+| `REFRESH_REUSE_GRACE_SEC`                                    | `20`                               | Parallel-tab window before a reused token revokes the session         |
+| `PASSWORD_RESET_TTL_MIN`                                     | `30`                               | Reset link lifetime                                                   |
+| `LOGIN_LOCK_THRESHOLD` / `LOGIN_LOCK_MINUTES`                | `10` / `15`                        | Failures per window before a temporary lock                           |
+| `COOKIE_SECURE`                                              | `true`                             | Secure refresh cookie; `false` only for local http                    |
+| `ALLOW_INSECURE_COOKIE`                                      | `false`                            | Allow `COOKIE_SECURE=false` in production mode (local http demo only) |
+| `TRIAL_DURATION_MIN` / `SLOT_GRID_MIN` / `MENTOR_BUFFER_MIN` | `60` / `30` / `15`                 | Class length, UTC slot grid, changeover after each class              |
+| `BOOKING_LEAD_TIME_MIN` / `BOOKING_HORIZON_DAYS`             | `240` / `14`                       | Bookable window, counted from the server clock                        |
+| `RESCHEDULE_CUTOFF_MIN` / `DEFAULT_MAX_TRIALS_PER_DAY`       | `120` / `2`                        | Reschedule cutoff, default mentor daily cap                           |
+| `CLASSROOM_OPENS_MIN_BEFORE` / `MENTOR_DISPLAY_TIMEZONE`     | `10` / `Asia/Kolkata`              | Classroom opening, mentor zone shown in the UI                        |
+| `SMTP_URL`                                                   | `smtp://localhost:1025`            | Outgoing mail (Mailpit locally); required in production               |
+| `MAIL_FROM`                                                  | `Codeyoung <trials@codeyoung.dev>` | Sender and calendar invite organizer                                  |
+| `OUTBOX_POLL_MS` / `OUTBOX_MAX_ATTEMPTS`                     | `2000` / `8`                       | Worker poll interval / attempts before a message is `DEAD`            |
 
 ## Worker
 
