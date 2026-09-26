@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ErrorCode,
-  errorCodeSchema,
+  ErrorCodeSchema,
   errorCodeStatus,
+  errorTitles,
   errorTypeUri,
-  problemDetailsSchema,
+  ProblemDetailsSchema,
 } from './errors.js';
 
 describe('ErrorCode', () => {
@@ -24,8 +25,12 @@ describe('ErrorCode', () => {
     expect(errorCodeStatus.TEMPORARILY_UNAVAILABLE).toBe(503);
   });
 
+  it('has a title for every code', () => {
+    expect(Object.keys(errorTitles).sort()).toEqual(Object.values(ErrorCode).sort());
+  });
+
   it('rejects unknown codes', () => {
-    expect(errorCodeSchema.safeParse('TEAPOT').success).toBe(false);
+    expect(ErrorCodeSchema.safeParse('TEAPOT').success).toBe(false);
   });
 });
 
@@ -37,7 +42,7 @@ describe('errorTypeUri', () => {
   });
 });
 
-describe('problemDetailsSchema', () => {
+describe('ProblemDetailsSchema', () => {
   it('accepts a problem with field errors and keeps code-specific members', () => {
     const problem = {
       type: errorTypeUri(ErrorCode.VALIDATION_FAILED),
@@ -49,12 +54,12 @@ describe('problemDetailsSchema', () => {
       extra: true,
     };
 
-    expect(problemDetailsSchema.parse(problem)).toEqual(problem);
+    expect(ProblemDetailsSchema.parse(problem)).toEqual(problem);
   });
 
   it('requires a traceId', () => {
     expect(
-      problemDetailsSchema.safeParse({ type: 'x', title: 'x', status: 500, code: 'INTERNAL_ERROR' })
+      ProblemDetailsSchema.safeParse({ type: 'x', title: 'x', status: 500, code: 'INTERNAL_ERROR' })
         .success,
     ).toBe(false);
   });

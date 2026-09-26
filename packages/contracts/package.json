@@ -10,23 +10,35 @@
       "@app/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./testing": {
+      "@app/source": "./src/testing/index.ts",
+      "types": "./dist/testing/index.d.ts",
+      "default": "./dist/testing/index.js"
+    },
+    "./common-passwords": {
+      "@app/source": "./src/common-passwords.ts",
+      "types": "./dist/common-passwords.d.ts",
+      "default": "./dist/common-passwords.js"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
     "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.json",
-    "test": "vitest run",
-    "test:cov": "vitest run --coverage",
+    "test": "vitest run --coverage",
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@app/time": "*",
     "zod": "4.6.5"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "5.0.2",
+    "vite": "8.3.1",
     "vitest": "5.0.2"
   }
 }
