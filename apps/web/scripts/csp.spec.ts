@@ -6,8 +6,9 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * The web image's Content-Security-Policy (infra/web/Caddyfile) allows inline blocks by hash
- * only. This recomputes each hash from its source, so editing the theme script in index.html or
- * upgrading Sonner or NumberFlow fails here until the header lists the new hash.
+ * only. Script hashes come from apps/web/csp.json; style hashes are recomputed here from what
+ * Sonner and NumberFlow inject. Editing the theme script or upgrading either library fails here
+ * until the header lists the new hash.
  */
 const root = resolve(import.meta.dirname, '../../..');
 
@@ -31,14 +32,15 @@ function hashesIn(directive: string): string[] {
 }
 
 describe('Content-Security-Policy of the web image', () => {
-  it('allows exactly the inline scripts of index.html', () => {
-    const html = readFileSync(resolve(root, 'apps/web/index.html'), 'utf8');
-    const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(
-      (match) => sha256(match[1] ?? ''),
-    );
+  it('allows exactly the inline script hashes of apps/web/csp.json', () => {
+    // csp.json is the single source for script hashes; the web app's own tests keep it equal
+    // to index.html and the build checks dist/index.html against it.
+    const { scriptSrcHashes } = JSON.parse(
+      readFileSync(resolve(root, 'apps/web/csp.json'), 'utf8'),
+    ) as { scriptSrcHashes: string[] };
 
-    expect(inline.length).toBeGreaterThan(0);
-    expect(hashesIn('script-src')).toEqual(inline.sort());
+    expect(scriptSrcHashes.length).toBeGreaterThan(0);
+    expect(hashesIn('script-src')).toEqual([...scriptSrcHashes].sort());
   });
 
   it('allows exactly the <style> blocks Sonner and NumberFlow inject', async () => {

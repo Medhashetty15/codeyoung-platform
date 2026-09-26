@@ -17,7 +17,8 @@
 		# The demo classroom uses no devices.
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 		# Everything is same-origin. The hashes allow exactly these inline blocks, nothing else:
-		#   script-src: the theme script in apps/web/index.html (applied before first paint);
+		#   script-src: the theme script in apps/web/index.html (applied before first paint),
+		#               hash kept in apps/web/csp.json;
 		#   style-src:  the <style> Sonner (toasts) injects at load and the one NumberFlow adds
 		#               to its shadow root, plus the empty-string hash: Sonner inserts its
 		#               <style> empty before filling it, and browsers check it on insertion.
