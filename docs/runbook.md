@@ -35,7 +35,8 @@ docker compose --profile app up --build     # first build takes a few minutes
 - Fresh demo data: `docker compose --profile app run --rm migrate node apps/api/dist/cli.js db:seed --reset --yes`.
 - Stop: `docker compose --profile app stop`. `docker compose down -v` also deletes the database
   volume, which other local work may share.
-- `APP_PORT` changes the port; `JWT_ACCESS_SECRET` overrides the local placeholder secret.
+- `APP_PORT=8088` (any free port) when 8080 is taken; `JWT_ACCESS_SECRET` overrides the local
+  placeholder secret.
   Safari drops Secure cookies on plain http, so use Chrome or Firefox locally (PD-10).
 
 ## 3. Deploying
