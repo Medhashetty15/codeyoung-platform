@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defaultClientConditions, defineConfig, loadEnv } from 'vite';
+import { defaultClientConditions, defaultServerConditions, defineConfig, loadEnv } from 'vite';
 
 import { preloadFonts } from './scripts/preload-fonts.ts';
 
@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => {
       // Workspace packages resolve to their TypeScript sources: no rebuild while developing.
       conditions: ['@app/source', ...defaultClientConditions],
     },
+    // Specs running in the node environment resolve through SSR; keep them on sources too.
+    ssr: { resolve: { conditions: ['@app/source', ...defaultServerConditions] } },
     server: {
       port: 5173,
       strictPort: true,
@@ -36,6 +38,8 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./src/test/setup.ts'],
       css: false,
       restoreMocks: true,
+      // Transform workspace packages instead of letting Node load them, so @app/source applies.
+      server: { deps: { inline: [/^@app\//] } },
     },
   };
 });

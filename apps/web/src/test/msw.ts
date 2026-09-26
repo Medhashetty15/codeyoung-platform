@@ -1,8 +1,10 @@
 import { HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 
-/** One MSW server for all component tests; each test adds handlers with server.use(). */
-export const server = setupServer();
+import { handlers } from '../mocks/handlers';
+
+/** One MSW server for all component tests, starting from the fixture handlers; tests add scenarios with server.use(). */
+export const server = setupServer(...handlers);
 
 export function problem(
   status: number,
