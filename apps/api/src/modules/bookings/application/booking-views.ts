@@ -31,13 +31,13 @@ export function isUuid(value: string): boolean {
 }
 
 /** Opaque list cursor: the (start, id) of the last item of the previous page. */
-export function encodeCursor(booking: BookingRecord): string {
+function encodeCursor(booking: BookingRecord): string {
   return Buffer.from(JSON.stringify([isoInstant(booking.startsAt), booking.id])).toString(
     'base64url',
   );
 }
 
-export function decodeCursor(cursor: string): {
+function decodeCursor(cursor: string): {
   startsAt: ReturnType<typeof toInstant>;
   id: string;
 } {

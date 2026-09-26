@@ -17,7 +17,7 @@ const commaSeparated = z
   .pipe(z.array(z.url({ protocol: /^https?$/ })));
 
 /** Environment variables read at boot (docs/03-backend-design.md §11). */
-export const envSchema = z
+const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
@@ -98,7 +98,7 @@ export interface Mailbox {
 const MAILBOX = /^(?:"?([^"<>]*?)"?\s*<([^<>\s]+@[^<>\s]+)>|([^<>\s]+@[^<>\s]+))$/;
 
 /** `Codeyoung <trials@codeyoung.dev>` -> name and address; null when it is not one. */
-export function parseMailbox(value: string): Mailbox | null {
+function parseMailbox(value: string): Mailbox | null {
   const match = MAILBOX.exec(value.trim());
   if (match === null) return null;
   const email = match[2] ?? match[3] ?? '';

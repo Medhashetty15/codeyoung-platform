@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { argon2id, hash, needsRehash, verify } from 'argon2';
 
 /** OWASP argon2id parameters (docs/03 §6.3): 19 MiB memory, 2 iterations, 1 lane. */
-export const ARGON2_OPTIONS = { memoryCost: 19_456, timeCost: 2, parallelism: 1 } as const;
+const ARGON2_OPTIONS = { memoryCost: 19_456, timeCost: 2, parallelism: 1 } as const;
 
 /** Hashes passwords as argon2id PHC strings; never logs or returns the plain text. */
 @Injectable()

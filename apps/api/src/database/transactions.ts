@@ -9,7 +9,7 @@ const DEADLOCK_DETECTED = '40P01';
 const LOCK_NOT_AVAILABLE = '55P03';
 
 /** Seconds a client should wait after losing a lock wait (docs/03 §5.1). */
-export const LOCK_RETRY_AFTER_SECONDS = 2;
+const LOCK_RETRY_AFTER_SECONDS = 2;
 
 function sqlState(error: unknown): string | undefined {
   return error instanceof QueryFailedError

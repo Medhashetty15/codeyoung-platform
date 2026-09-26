@@ -5,7 +5,7 @@ import { ErrorCode, REFRESH_COOKIE_NAME, REQUESTED_WITH_HEADER } from '@app/cont
 import { AppError } from '../../../common/errors/app-error';
 
 /** The cookie is only ever sent to the auth endpoints (docs/03 §6.1). */
-export const REFRESH_COOKIE_PATH = '/api/v1/auth';
+const REFRESH_COOKIE_PATH = '/api/v1/auth';
 
 function cookieOptions(secure: boolean): CookieOptions {
   return { httpOnly: true, secure, sameSite: 'strict', path: REFRESH_COOKIE_PATH };

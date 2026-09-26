@@ -6,8 +6,8 @@
 
 | Module | Owns (tables) | Responsibilities |
 |--------|---------------|------------------|
-| `users` | `users` | Parent profile (name, phone, zone), password hashing service. |
-| `auth` | `auth_sessions`, `refresh_tokens`, `password_reset_tokens` | Register, login, refresh rotation, logout, forgot/reset/change password, JWT guard, lockout. |
+| `users` | `users` | Parent profile (name, phone, zone), password hashing service, account anonymisation (A-14). |
+| `auth` | `auth_sessions`, `refresh_tokens`, `password_reset_tokens` | Register, login, refresh rotation, logout, forgot/reset/change password, JWT guard, lockout, expired-credential cleanup. |
 | `students` | `students` | Parent's children. |
 | `mentors` | `mentors`, `mentor_availability_rules`, `mentor_time_off` | Mentor data + availability (written by ops CLI only in MVP). |
 | `availability` | *(read model)* | **Slot engine** (pure) + slots API. |
@@ -15,6 +15,7 @@
 | `classroom` | *(read model)* | `MeetingProvider` (dummy) + join-token lookup. |
 | `notifications` | `outbox_messages`, `email_deliveries` | Outbox writer (in-transaction), worker relay, templates, `.ics`, SMTP transport. |
 | `waitlist` | `waitlist_entries` | Capture demand when the horizon is full. |
+| `meta` | — | `/meta/booking-config`, `/meta/timezones` (zone catalogue from the vendored IANA `zone.tab`). |
 | `health` | — | `/health/live`, `/health/ready`. |
 | `ops-cli` | — | `nest-commander` commands wrapping the services above. |
 
@@ -29,7 +30,10 @@ bookings/
 └── infra/           # TypeORM entities + repositories (incl. raw SQL for locking queries)
 ```
 
-`domain/` never imports Nest or TypeORM and is unit-tested in isolation.
+`domain/` never imports Nest or TypeORM and is unit-tested in isolation. Each process imports only
+what it runs: the API the HTTP modules, the worker `*-worker.module.ts` (notifications relay,
+booking completion, credential cleanup), the CLI `*-ops.module.ts` (booking and mentor changes,
+account deletion), so HTTP-only providers such as the throttler never load outside the API.
 
 ### Three entry points, one codebase
 
@@ -691,7 +695,8 @@ used by the API for validation and by the web app for parsing); fixture builders
 
 | Command | Purpose |
 |---------|---------|
-| `db:migrate` · `db:revert [--yes]` · `db:drift` | Apply pending migrations; undo the last one (asks first); exit 1 if entities and migrations disagree. |
+| `config:print` | Validate the environment and print the effective settings (no secrets). |
+| `db:create` · `db:migrate` · `db:revert [--yes]` · `db:drift` | Create the database in `DATABASE_URL` if missing; apply pending migrations; undo the last one (asks first); exit 1 if entities and migrations disagree. |
 | `db:seed --scenario e2e [--tz ZONE] [--empty] [--yes]` | Resets, seeds, then prepares dates relative to now in `ZONE` (default Europe/London) for end-to-end tests (PD-10): today + 2 has exactly one bookable slot (time off around it), today + 3 is fully booked (filler bookings, no emails); `--empty` deactivates every mentor instead (waitlist). Prints a JSON summary with the dates, the remaining slot and the demo login. |
 | `db:seed [--reset] [--yes]` | 10 IST mentors (evening/night windows covering US after-school + UK evenings, weekends), demo parent (Hannah Okafor, Europe/London) with children Leo and Maya. Idempotent; `--reset` empties every table first (asks first). Refused in production. |
 | `mentor:list` | Mentors with today's load. |

@@ -9,7 +9,7 @@ import { jsonBodyParser, translateBodyErrors } from '../common/http/json-body';
 import { REQUEST_ID_HEADER, requestIdMiddleware } from '../common/http/request-id';
 import { AppConfig } from '../config/app-config';
 
-export const API_PREFIX = 'api/v1';
+const API_PREFIX = 'api/v1';
 
 /** Options for `NestFactory.create`, shared by `main.ts` and the e2e tests. */
 export const HTTP_APP_OPTIONS = {
@@ -17,7 +17,7 @@ export const HTTP_APP_OPTIONS = {
   bufferLogs: true,
   abortOnError: false,
 } as const satisfies NestApplicationOptions;
-export const DOCS_PATH = 'api/docs';
+const DOCS_PATH = 'api/docs';
 
 const ALLOWED_HEADERS = [
   'Authorization',
