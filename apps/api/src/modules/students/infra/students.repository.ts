@@ -32,7 +32,8 @@ export class StudentsRepository {
   async listByParent(parentId: string): Promise<StudentRecord[]> {
     const rows = await this.manager.find(StudentEntity, {
       where: { parentId },
-      order: { createdAt: 'ASC', id: 'ASC' },
+      // Stable order for the child picker; children added together sort by name.
+      order: { createdAt: 'ASC', firstName: 'ASC' },
     });
     return rows.map(toRecord);
   }
