@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import { todayIn } from '@app/time';
 
 import { Clock } from '../../../common/clock/clock';
+import { count } from '../../../common/text/count';
 import {
   MentorNotFoundError,
   MentorScheduleChanges,
@@ -68,7 +69,7 @@ export class MentorAvailabilitySetCommand extends DatabaseCommand<AvailabilitySe
         this.changes.setWeeklyWindows(email, windows, from, { ...settings, dryRun: true }),
       apply: () => this.changes.setWeeklyWindows(email, windows, from, settings),
     });
-    if (outcome !== null) this.output.line(`Saved ${String(windows.length)} weekly windows.`);
+    if (outcome !== null) this.output.line(`Saved ${count(windows.length, 'weekly window')}.`);
   }
 
   @Option({

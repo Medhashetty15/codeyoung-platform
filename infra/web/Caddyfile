@@ -1,0 +1,40 @@
+# The web app and its API on one origin (docs/runbook.md). TLS terminates in
+# front of this in production; locally it is plain http on :8080.
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	encode zstd gzip
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		# Join links and reset links carry their token in the URL: never leak it.
+		Referrer-Policy no-referrer
+		X-Frame-Options DENY
+		# The demo classroom uses no devices.
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM:api:3000}
+	}
+
+	# Hashed build output: cached for good. A missing chunk is a real 404 (an old tab after a
+	# deploy), never index.html, so the app's failed-import handling can offer a reload.
+	handle /assets/* {
+		root * /srv
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	handle {
+		root * /srv
+		header Cache-Control "no-cache"
+		# Client-side routes (/book, /bookings/..., /class/...) all load index.html.
+		try_files {path} /index.html
+		file_server
+	}
+}

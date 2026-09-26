@@ -453,6 +453,10 @@ describe('user:anonymise (A-14)', () => {
       [parent.email],
     );
     expect(await run(anonymise, [parent.email], { yes: true })).toBeNull();
+    expect(cli.output.text).toContain(
+      `Account ${parent.email}: Hannah Okafor, 1 child, 1 booking (kept, without personal details).`,
+    );
+    expect(cli.output.text).toContain('removed 1 waitlist entry, cancelled 0 unsent emails.');
 
     const [user] = await db.query<{ id: string; email: string; full_name: string; phone: null }[]>(
       'SELECT id, email, full_name, phone FROM users',

@@ -1,6 +1,7 @@
 import { Command, Option } from 'nest-commander';
 import { DataSource } from 'typeorm';
 
+import { count } from '../../../common/text/count';
 import {
   AccountDeletionService,
   AccountInUseError,
@@ -33,8 +34,8 @@ export class UserAnonymiseCommand extends DatabaseCommand<UserAnonymiseOptions> 
     const [email = ''] = args;
     const account = await this.deletions.describe(email);
     this.output.line(
-      `Account ${email}: ${account.fullName}, ${String(account.children)} children, ` +
-        `${String(account.bookings)} bookings (kept, without personal details).`,
+      `Account ${email}: ${account.fullName}, ${count(account.children, 'child', 'children')}, ` +
+        `${count(account.bookings, 'booking')} (kept, without personal details).`,
     );
     if (account.upcomingReferences.length > 0) {
       throw new AccountInUseError(
@@ -55,8 +56,9 @@ export class UserAnonymiseCommand extends DatabaseCommand<UserAnonymiseOptions> 
     }
     const result = await this.deletions.anonymise(email);
     this.output.line(
-      `Anonymised. Signed out ${String(result.sessions)} sessions, removed ` +
-        `${String(result.waitlistEntries)} waitlist entries, cancelled ${String(result.pendingMessages)} unsent emails.`,
+      `Anonymised. Signed out ${count(result.sessions, 'session')}, removed ` +
+        `${count(result.waitlistEntries, 'waitlist entry', 'waitlist entries')}, ` +
+        `cancelled ${count(result.pendingMessages, 'unsent email')}.`,
     );
   }
 

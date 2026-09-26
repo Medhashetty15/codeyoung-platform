@@ -10,12 +10,13 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { type Request, type Response } from 'express';
 
 import { type Booking, type BookingListResponse } from '@app/contracts';
 
 import { type AuthenticatedUser, CurrentUser } from '../../../common/auth/authenticated-user';
+import { ApiProblems, BookingDto, BookingListResponseDto } from '../../../common/http/api-docs';
 import { KeyedRateLimiter } from '../../../common/http/keyed-rate-limiter';
 import { BookingViews } from '../application/booking-views';
 import { CancelBookingService } from '../application/cancel-booking.service';
@@ -47,6 +48,24 @@ export class BookingsController {
 
   /** 201 with the new booking; 200 with the same booking when the key is replayed. */
   @Post()
+  @ApiResponse({
+    status: 201,
+    type: BookingDto,
+    description: 'Booked (200 with the same booking when the Idempotency-Key is replayed)',
+  })
+  @ApiProblems(
+    'UNAUTHENTICATED',
+    'INVALID_TIMEZONE',
+    'SLOT_NOT_ON_GRID',
+    'SLOT_IN_PAST',
+    'SLOT_OUTSIDE_HORIZON',
+    'STUDENT_NOT_FOUND',
+    'STUDENT_NAME_TAKEN',
+    'STUDENT_ALREADY_HAS_TRIAL',
+    'NO_MENTOR_AVAILABLE',
+    'IDEMPOTENCY_KEY_REUSED',
+    'TEMPORARILY_UNAVAILABLE',
+  )
   async create(
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: CreateBookingDto,
@@ -61,6 +80,8 @@ export class BookingsController {
   }
 
   @Get()
+  @ApiResponse({ status: 200, type: BookingListResponseDto })
+  @ApiProblems('UNAUTHENTICATED')
   list(
     @CurrentUser() user: AuthenticatedUser,
     @Query() query: BookingListQueryDto,
@@ -69,11 +90,15 @@ export class BookingsController {
   }
 
   @Get(':id')
+  @ApiResponse({ status: 200, type: BookingDto })
+  @ApiProblems('UNAUTHENTICATED', 'BOOKING_NOT_FOUND')
   get(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Booking> {
     return this.views.get(user.userId, id);
   }
 
   @Post(':id/cancel')
+  @ApiResponse({ status: 200, type: BookingDto })
+  @ApiProblems('UNAUTHENTICATED', 'BOOKING_NOT_FOUND', 'BOOKING_NOT_MODIFIABLE')
   @HttpCode(HttpStatus.OK)
   async cancel(
     @CurrentUser() user: AuthenticatedUser,
@@ -85,6 +110,19 @@ export class BookingsController {
 
   /** 201 with the new booking (the old one becomes RESCHEDULED); 200 on replay. */
   @Post(':id/reschedule')
+  @ApiResponse({ status: 201, type: BookingDto, description: 'The new booking (200 on replay)' })
+  @ApiProblems(
+    'UNAUTHENTICATED',
+    'BOOKING_NOT_FOUND',
+    'BOOKING_NOT_MODIFIABLE',
+    'INVALID_TIMEZONE',
+    'SLOT_NOT_ON_GRID',
+    'SLOT_IN_PAST',
+    'SLOT_OUTSIDE_HORIZON',
+    'NO_MENTOR_AVAILABLE',
+    'IDEMPOTENCY_KEY_REUSED',
+    'TEMPORARILY_UNAVAILABLE',
+  )
   async reschedule(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
@@ -100,6 +138,12 @@ export class BookingsController {
   }
 
   @Get(':id/calendar.ics')
+  @ApiResponse({
+    status: 200,
+    description: 'iCalendar file, METHOD:PUBLISH',
+    content: { 'text/calendar': { schema: { type: 'string' } } },
+  })
+  @ApiProblems('UNAUTHENTICATED', 'BOOKING_NOT_FOUND', 'BOOKING_NOT_MODIFIABLE')
   async calendar(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,

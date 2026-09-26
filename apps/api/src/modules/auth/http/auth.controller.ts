@@ -1,5 +1,5 @@
 import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { type Request, type Response } from 'express';
 
@@ -8,6 +8,7 @@ import { type AuthResponse, type RefreshResponse } from '@app/contracts';
 import { type AuthenticatedUser, CurrentUser } from '../../../common/auth/authenticated-user';
 import { Public } from '../../../common/auth/public.decorator';
 import { AppError } from '../../../common/errors/app-error';
+import { ApiProblems, AuthResponseDto, RefreshResponseDto } from '../../../common/http/api-docs';
 import { KeyedRateLimiter } from '../../../common/http/keyed-rate-limiter';
 import { AppConfig } from '../../../config/app-config';
 import { AuthService, type ClientContext, type SessionGrant } from '../application/auth.service';
@@ -48,6 +49,12 @@ export class AuthController {
 
   @Public()
   @Post('register')
+  @ApiResponse({
+    status: 201,
+    type: AuthResponseDto,
+    description: 'Account created; refresh cookie set',
+  })
+  @ApiProblems('WEAK_PASSWORD', 'INVALID_TIMEZONE', 'EMAIL_ALREADY_REGISTERED')
   @Throttle({ default: { limit: 5, ttl: HOUR } })
   async register(
     @Body() body: RegisterDto,
@@ -59,6 +66,8 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @ApiResponse({ status: 200, type: AuthResponseDto, description: 'Logged in; refresh cookie set' })
+  @ApiProblems('INVALID_CREDENTIALS', 'ACCOUNT_TEMPORARILY_LOCKED')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: MINUTE } })
   async login(
@@ -72,6 +81,12 @@ export class AuthController {
 
   @Public()
   @Post('refresh')
+  @ApiResponse({
+    status: 200,
+    type: RefreshResponseDto,
+    description: 'New access token; rotated cookie',
+  })
+  @ApiProblems('REFRESH_TOKEN_INVALID', 'REFRESH_TOKEN_REUSED')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 30, ttl: MINUTE } })
   async refresh(
@@ -90,6 +105,8 @@ export class AuthController {
 
   @Public()
   @Post('logout')
+  @ApiResponse({ status: 204, description: 'Session ended; cookie cleared' })
+  @ApiProblems()
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(
     @Req() request: Request,
@@ -102,6 +119,8 @@ export class AuthController {
 
   @Public()
   @Post('password/forgot')
+  @ApiResponse({ status: 202, description: 'Accepted whether or not the email has an account' })
+  @ApiProblems()
   @HttpCode(HttpStatus.ACCEPTED)
   @Throttle({ default: { limit: 5, ttl: HOUR } })
   async forgotPassword(@Body() body: ForgotPasswordDto): Promise<void> {
@@ -111,6 +130,8 @@ export class AuthController {
 
   @Public()
   @Post('password/reset')
+  @ApiResponse({ status: 204, description: 'Password set; every session signed out' })
+  @ApiProblems('RESET_TOKEN_INVALID', 'WEAK_PASSWORD')
   @HttpCode(HttpStatus.NO_CONTENT)
   @Throttle({ default: { limit: 10, ttl: MINUTE } })
   async resetPassword(@Body() body: ResetPasswordDto): Promise<void> {
@@ -118,6 +139,8 @@ export class AuthController {
   }
 
   @Post('password/change')
+  @ApiResponse({ status: 204, description: 'Password changed; other sessions signed out' })
+  @ApiProblems('UNAUTHENTICATED', 'INVALID_CREDENTIALS', 'WEAK_PASSWORD')
   @HttpCode(HttpStatus.NO_CONTENT)
   @Throttle({ default: { limit: 10, ttl: MINUTE } })
   async changePassword(

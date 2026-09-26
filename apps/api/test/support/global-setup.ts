@@ -24,7 +24,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
         .withEnvironment({ TZ: 'UTC', PGTZ: 'UTC' })
         .start(),
       // Same image as docker-compose.yml.
-      new GenericContainer('axllent/mailpit:v1.27')
+      new GenericContainer('axllent/mailpit:v1.31.2')
         .withExposedPorts(SMTP_PORT, HTTP_PORT)
         .withEnvironment({ MP_MAX_MESSAGES: '5000' })
         .withWaitStrategy(Wait.forHttp('/readyz', HTTP_PORT))

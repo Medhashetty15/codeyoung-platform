@@ -1,5 +1,5 @@
 import { Body, Controller, HttpStatus, Post, Res } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { type Response } from 'express';
 import { createZodDto } from 'nestjs-zod';
@@ -9,6 +9,7 @@ import { isoInstant } from '@app/time';
 
 import { type AuthenticatedUser, OptionalUser } from '../../../common/auth/authenticated-user';
 import { Public } from '../../../common/auth/public.decorator';
+import { ApiProblems, WaitlistResponseDto } from '../../../common/http/api-docs';
 import { WaitlistService } from '../application/waitlist.service';
 
 class JoinWaitlistDto extends createZodDto(WaitlistRequestSchema) {}
@@ -23,6 +24,12 @@ export class WaitlistController {
 
   /** 201 for a new entry, 200 when this email is already waiting (docs/03 §9). */
   @Post()
+  @ApiResponse({
+    status: 201,
+    type: WaitlistResponseDto,
+    description: 'Joined (200 with the open entry when this email is already waiting)',
+  })
+  @ApiProblems('INVALID_TIMEZONE')
   @Throttle({ default: { limit: 5, ttl: HOUR } })
   async join(
     @Body() body: JoinWaitlistDto,
