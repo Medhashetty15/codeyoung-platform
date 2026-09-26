@@ -15,6 +15,8 @@ const ROUTES = [
   'src/routes/Bookings.tsx',
   'src/routes/BookingDetail.tsx',
   'src/routes/Reschedule.tsx',
+  'src/routes/Account.tsx',
+  'src/routes/Classroom.tsx',
 ];
 
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
