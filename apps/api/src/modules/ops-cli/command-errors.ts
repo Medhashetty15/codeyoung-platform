@@ -3,6 +3,14 @@ import { errorTitles } from '@app/contracts';
 import { AppError } from '../../common/errors/app-error';
 import { ConfigValidationError } from '../../config/app-config';
 import { SeedRefusedError } from '../../database/seed/database-seeder';
+import {
+  MentorNotFoundError,
+  ScheduleConflictError,
+} from '../bookings/application/mentor-schedule-changes.service';
+import {
+  AccountInUseError,
+  AccountNotFoundError,
+} from '../users/application/account-deletion.service';
 
 import { ConfirmationRequiredError } from './prompt';
 
@@ -17,6 +25,10 @@ const EXPECTED_ERRORS = [
   SeedRefusedError,
   ConfigValidationError,
   InvalidOptionError,
+  ScheduleConflictError,
+  MentorNotFoundError,
+  AccountInUseError,
+  AccountNotFoundError,
 ];
 
 /** Prints a failed command's error and makes the process exit non-zero. */

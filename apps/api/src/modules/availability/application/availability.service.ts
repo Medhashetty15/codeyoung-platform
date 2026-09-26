@@ -150,6 +150,25 @@ export class AvailabilityService {
     return computation.free[0]?.mentorIds.includes(mentorId) ?? false;
   }
 
+  /**
+   * Whether a mentor's changed schedule (time off, windows, zone) still holds
+   * one of their booked classes, inside the transaction that changed it. The
+   * daily cap is not re-applied: lowering it only limits future bookings.
+   */
+  async stillFits(
+    manager: EntityManager,
+    mentorId: string,
+    booking: { id: string; startsAt: Temporal.Instant },
+  ): Promise<boolean> {
+    const computation = await this.compute(
+      booking.startsAt,
+      booking.startsAt.add({ milliseconds: 1 }),
+      this.nowFor(booking.startsAt, 'ops'),
+      { manager, mentorIds: [mentorId], excludeBookingId: booking.id, ignoreCap: true },
+    );
+    return computation.free[0]?.mentorIds.includes(mentorId) ?? false;
+  }
+
   /** Every bookable start in `[from, to)` with the mentors free for it (ops tooling). */
   async freeSlots(
     from: Temporal.Instant,
@@ -197,6 +216,7 @@ export class AvailabilityService {
       manager?: EntityManager;
       mentorIds?: readonly string[];
       excludeBookingId?: string;
+      ignoreCap?: boolean;
     } = {},
   ): Promise<SlotComputation> {
     const padding = { hours: CAP_PADDING_HOURS };
@@ -221,6 +241,7 @@ export class AvailabilityService {
     );
     const mentors: MentorSchedule[] = mentorSchedules.map((schedule) => ({
       ...schedule,
+      ...(options.ignoreCap === true ? { maxTrialsPerDay: Number.MAX_SAFE_INTEGER } : {}),
       bookings: confirmed.filter((booking) => booking.mentorId === schedule.id),
     }));
     return computeSlots({ from, to, now }, this.engineConfig, mentors);
