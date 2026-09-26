@@ -24,7 +24,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
       {OPTIONS.map(({ value, label, icon: OptionIcon }) => (
         <label
           key={value}
-          className="pressable flex h-9 cursor-pointer items-center gap-1.5 rounded-[6px] px-3 text-small font-medium text-ink-muted select-none hover:text-ink has-checked:bg-surface has-checked:text-ink has-checked:shadow-float has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
+          className="pressable relative flex h-9 cursor-pointer items-center gap-1.5 rounded-[6px] px-3 text-small font-medium text-ink-muted select-none hover:text-ink has-checked:bg-surface has-checked:text-ink has-checked:shadow-float has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent"
         >
           <input
             type="radio"

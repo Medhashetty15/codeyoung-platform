@@ -29,7 +29,7 @@ export function DateChip({
     <label
       data-muted={muted || undefined}
       className={cn(
-        'pressable flex h-18 min-w-16 shrink-0 cursor-pointer snap-start flex-col items-center justify-center gap-0.5 rounded-control border border-line bg-surface px-2 select-none',
+        'pressable relative flex h-18 min-w-16 shrink-0 cursor-pointer snap-start flex-col items-center justify-center gap-0.5 rounded-control border border-line bg-surface px-2 select-none',
         'text-ink hover:bg-sunken',
         'has-checked:border-ink has-checked:bg-ink has-checked:text-canvas',
         'data-muted:text-ink-faint data-muted:has-checked:text-canvas',

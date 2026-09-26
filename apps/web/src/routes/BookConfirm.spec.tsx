@@ -90,7 +90,10 @@ describe('confirm, signed in', () => {
     open();
     const leo = await screen.findByRole('radio', { name: 'Leo, 9' });
     expect(leo).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'Maya, 12' })).toBeDisabled();
+    const maya = screen.getByRole('radio', { name: 'Maya, 12' });
+    expect(maya).toBeDisabled();
+    expect(maya).toHaveAccessibleDescription(/Maya already has a trial on Tue 27 Oct\./);
+    expect(screen.getByRole('radio', { name: 'Add a child' })).not.toBeChecked();
     expect(screen.getByText(/Maya already has a trial on Tue 27 Oct\./)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View booking' })).toHaveAttribute(
       'href',
@@ -252,7 +255,14 @@ describe('confirmation page', () => {
     const createObjectURL = vi.fn(() => 'blob:ics');
     Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
     open('/bookings/0b6c3d5e-8f4a-4c1b-9d2e-7a6b5c4d3e2f?new=1');
-    await userEvent.click(await screen.findByRole('button', { name: 'Add to calendar' }));
+    await screen.findByRole('button', { name: 'Add to calendar' });
+    // The menu code loads after the page; press the real trigger.
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Add to calendar' })).toHaveAttribute(
+        'aria-expanded',
+      );
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Add to calendar' }));
     expect(await screen.findByRole('menuitem', { name: 'Google Calendar' })).toHaveAttribute(
       'href',
       expect.stringContaining('https://calendar.google.com/calendar/render?action=TEMPLATE'),
