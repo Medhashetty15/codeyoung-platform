@@ -39,6 +39,13 @@ export async function runScheduleChange<T>(
         'Re-run with --reassign to move them to other mentors, or cancel them first (booking:cancel).',
       );
     }
+    if (preview.uncovered.length > 0) {
+      const references = preview.uncovered.map((booking) => booking.reference).join(', ');
+      throw new ScheduleConflictError(
+        `No other mentor is free for ${references}; nothing was changed. ` +
+          'Cancel those first: booking:cancel <reference> --reason "<why>"',
+      );
+    }
     run.output.line('They move to other mentors (all or nothing) and everyone is emailed.');
   }
   if (!(await run.prompt.confirm(run.question, { yes: run.yes }))) {

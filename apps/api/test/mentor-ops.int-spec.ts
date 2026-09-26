@@ -229,13 +229,34 @@ describe('mentor:time-off:add', () => {
       yes: true,
     });
 
-    expect(refusal).toMatch(/^No other mentor is free for CY-\w+; nothing was changed\./);
+    expect(refusal).toBe(
+      `No other mentor is free for ${await referenceOf(late.id)}; nothing was changed. ` +
+        'Cancel those first: booking:cancel <reference> --reason "<why>"',
+    );
     expect(await mentorOf(early.id)).toBe(priya.id);
     expect(await mentorOf(late.id)).toBe(priya.id);
     expect(await timeOffCount()).toBe(1);
     expect(
       await db.query<unknown[]>(`SELECT 1 FROM outbox_messages WHERE type = 'BookingReassigned'`),
     ).toEqual([]);
+  });
+
+  it('names every class without cover, not just the first (FR-O3)', async () => {
+    const priya = await addMentor(db, 'Priya Raghavan');
+    const parent = await TestParent.signUp(app);
+    const early = await parent.book(SATURDAY_EARLY);
+    const late = await parent.book(SATURDAY);
+
+    const refusal = await run(timeOffAdd(), [priya.email], {
+      from: '2026-10-24T00:00+05:30',
+      to: '2026-10-25T00:00+05:30',
+      reassign: true,
+      yes: true,
+    });
+
+    const references = [await referenceOf(early.id), await referenceOf(late.id)];
+    expect(refusal).toContain(`No other mentor is free for ${references.join(', ')};`);
+    expect(await timeOffCount()).toBe(0);
   });
 
   it('never ends with a booked class inside new time off when a parent books at the same moment', async () => {
