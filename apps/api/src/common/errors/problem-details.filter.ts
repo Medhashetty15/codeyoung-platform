@@ -1,13 +1,17 @@
 import { type ArgumentsHost, Catch, type ExceptionFilter, Logger } from '@nestjs/common';
 import { type Request, type Response } from 'express';
 
-import { errorTypeUri, PROBLEM_CONTENT_TYPE, type ProblemDetails } from '@app/contracts';
+import {
+  errorTitles,
+  errorTypeUri,
+  PROBLEM_CONTENT_TYPE,
+  type ProblemDetails,
+} from '@app/contracts';
 
 import { requestIdOf } from '../http/request-id';
 import { redactUrl } from '../logging/redaction';
 
 import { mapException, type MappedProblem } from './map-exception';
-import { PROBLEM_TITLES } from './problem-titles';
 
 /**
  * Single exit point for every HTTP error: RFC 7807 `application/problem+json`
@@ -47,7 +51,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       .status(mapped.status)
       .setHeader('Cache-Control', 'no-store')
       .type(PROBLEM_CONTENT_TYPE)
-      .send(JSON.stringify(toBody(mapped, traceId)));
+      .send(JSON.stringify(toBody(mapped, traceId, retryAfterSeconds(response))));
   }
 }
 
@@ -56,17 +60,28 @@ function reachedRequestLogger(request: Request): boolean {
   return (request as { log?: unknown }).log !== undefined;
 }
 
-export function toBody(mapped: MappedProblem, traceId: string): ProblemDetails {
+export function toBody(
+  mapped: MappedProblem,
+  traceId: string,
+  retryAfter?: number,
+): ProblemDetails {
   return {
     // Extras first so they can never overwrite the standard members.
     ...mapped.extras,
     type: errorTypeUri(mapped.code),
-    title: PROBLEM_TITLES[mapped.code],
+    title: errorTitles[mapped.code],
     status: mapped.status,
     code: mapped.code,
     ...(mapped.detail === undefined ? {} : { detail: mapped.detail }),
     traceId,
+    ...(retryAfter === undefined ? {} : { retryAfterSeconds: retryAfter }),
   };
+}
+
+/** Mirrors `Retry-After` (seconds) into the body so clients need not read headers. */
+function retryAfterSeconds(response: Response): number | undefined {
+  const value = Number(response.getHeader('Retry-After'));
+  return Number.isInteger(value) && value >= 0 ? value : undefined;
 }
 
 /**

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { ErrorCode, errorCodeStatus, problemDetailsSchema } from '@app/contracts';
+import { ErrorCode, ProblemSchema } from '@app/contracts';
 
 import { toBody } from './problem-details.filter';
-import { PROBLEM_TITLES } from './problem-titles';
 
 describe('toBody', () => {
   it('builds an RFC 7807 body that satisfies the shared contract', () => {
@@ -28,7 +27,7 @@ describe('toBody', () => {
       bookingId: '0b6c3d5e-8f4a-4c1b-9d2e-7a6b5c4d3e2f',
       traceId: 'trace-12345678',
     });
-    expect(problemDetailsSchema.parse(body)).toEqual(body);
+    expect(ProblemSchema.parse(body)).toEqual(body);
   });
 
   it('never lets extras overwrite the standard members', () => {
@@ -48,7 +47,7 @@ describe('toBody', () => {
       code: 'VALIDATION_FAILED',
       traceId: 'trace-12345678',
     });
-    expect(body.title).toBe(PROBLEM_TITLES.VALIDATION_FAILED);
+    expect(body.title).toBe('The request is not valid');
   });
 
   it('omits detail when there is none', () => {
@@ -59,10 +58,17 @@ describe('toBody', () => {
 
     expect(body).not.toHaveProperty('detail');
   });
-});
 
-describe('PROBLEM_TITLES', () => {
-  it('has a title for every error code', () => {
-    expect(Object.keys(PROBLEM_TITLES).sort()).toEqual(Object.keys(errorCodeStatus).sort());
+  it('mirrors Retry-After into retryAfterSeconds', () => {
+    const body = toBody(
+      { code: ErrorCode.RATE_LIMITED, status: 429, extras: {}, headers: {}, unexpected: false },
+      'trace-12345678',
+      42,
+    );
+
+    expect(ProblemSchema.parse(body)).toMatchObject({
+      code: 'RATE_LIMITED',
+      retryAfterSeconds: 42,
+    });
   });
 });
