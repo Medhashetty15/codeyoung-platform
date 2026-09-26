@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 
 import { EmailSchema } from '@app/contracts';
 
+import { count } from '../../../common/text/count';
 import { AppConfig } from '../../../config/app-config';
 import { isUniqueViolation } from '../../../database/pg-errors';
 import { MentorAdminRepository } from '../../mentors/infra/mentor-admin.repository';
@@ -42,7 +43,7 @@ export class MentorAddCommand extends DatabaseCommand<MentorAddOptions> {
     const timezone = zoneOption(requiredText(options.tz, '--tz'));
     const cap = options.cap ?? this.config.booking.defaultMaxTrialsPerDay;
     this.output.line(
-      `New mentor: ${fullName} <${email.data}>, ${timezone}, up to ${String(cap)} trials a day.`,
+      `New mentor: ${fullName} <${email.data}>, ${timezone}, up to ${count(cap, 'trial')} a day.`,
     );
     if (!(await this.prompt.confirm('Add this mentor?', { yes: options.yes ?? false }))) {
       this.output.line('Nothing changed.');

@@ -1,6 +1,7 @@
 import { Command, Option } from 'nest-commander';
 import { DataSource } from 'typeorm';
 
+import { count } from '../../../common/text/count';
 import { MentorScheduleChanges } from '../../bookings/application/mentor-schedule-changes.service';
 import { InvalidOptionError } from '../command-errors';
 import { DatabaseCommand } from '../database-command';
@@ -91,7 +92,7 @@ function describeUpdate(update: {
 }): string {
   const parts: string[] = [];
   if (update.maxTrialsPerDay !== undefined)
-    parts.push(`cap ${String(update.maxTrialsPerDay)} a day`);
+    parts.push(`cap ${count(update.maxTrialsPerDay, 'trial')} a day`);
   if (update.timezone !== undefined) parts.push(`zone ${update.timezone}`);
   if (update.isActive !== undefined) parts.push(update.isActive ? 'active' : 'inactive');
   return parts.join(', ');

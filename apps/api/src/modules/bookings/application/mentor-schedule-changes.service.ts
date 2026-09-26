@@ -4,6 +4,7 @@ import { DataSource, type EntityManager } from 'typeorm';
 import { type LocalDate, type Temporal } from '@app/time';
 
 import { Clock } from '../../../common/clock/clock';
+import { count } from '../../../common/text/count';
 import { inLockingTransaction } from '../../../database/transactions';
 import { AvailabilityService } from '../../availability/application/availability.service';
 import {
@@ -184,7 +185,5 @@ export class MentorScheduleChanges {
 
 function describe(bookings: readonly BookingRecord[]): string {
   const references = bookings.map((booking) => booking.reference).join(', ');
-  return bookings.length === 1
-    ? `1 booked class (${references})`
-    : `${String(bookings.length)} booked classes (${references})`;
+  return `${count(bookings.length, 'booked class', 'booked classes')} (${references})`;
 }
