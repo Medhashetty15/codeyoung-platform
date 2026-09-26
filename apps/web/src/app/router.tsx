@@ -12,6 +12,8 @@ export const routes: RouteObject[] = [
   {
     element: <AppShell />,
     errorElement: <RouteError />,
+    // A client-only app has nothing to hydrate; this silences React Router's SSR fallback warning.
+    hydrateFallbackElement: null,
     children: [
       {
         // Errors inside a page keep the header and footer around them.

@@ -292,3 +292,38 @@
     }
   }
 }
+
+/* Row 12: Account panel leaves (fade + 2px blur, 150ms), Confirm panel arrives (fade up 8px, 250ms). */
+@utility motion-panel-in {
+  transition:
+    opacity 250ms var(--ease-out),
+    transform 250ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    @starting-style {
+      transform: none;
+    }
+  }
+}
+
+@utility motion-panel-out {
+  transition:
+    opacity 150ms var(--ease-out),
+    filter 150ms var(--ease-out);
+
+  &[data-leaving] {
+    opacity: 0;
+    filter: blur(2px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &[data-leaving] {
+      filter: none;
+    }
+  }
+}
