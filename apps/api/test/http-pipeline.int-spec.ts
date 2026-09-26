@@ -1,13 +1,12 @@
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { getDataSourceToken } from '@nestjs/typeorm';
-import request from 'supertest';
 import { type DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { ProblemSchema } from '@app/contracts';
 
 import { ProbeController } from './support/probe.controller';
-import { createTestApp } from './support/test-app';
+import { api, createTestApp } from './support/test-app';
 
 const PROBLEM_JSON = /^application\/problem\+json/;
 const UUID = /^[0-9a-f-]{36}$/;
@@ -23,7 +22,7 @@ describe('HTTP pipeline', () => {
     await app.close();
   });
 
-  const http = () => request(app.getHttpServer());
+  const http = () => api(app);
 
   describe('health', () => {
     it('reports liveness without touching dependencies', async () => {
@@ -231,7 +230,7 @@ describe('rate limiting', () => {
   });
 
   it('returns RATE_LIMITED with Retry-After once the limit is spent', async () => {
-    const http = request(app.getHttpServer());
+    const http = api(app);
     for (let i = 0; i < 3; i += 1) await http.get('/api/v1/__probe/app-error').expect(409);
 
     const response = await http.get('/api/v1/__probe/app-error').expect(429);
@@ -242,7 +241,7 @@ describe('rate limiting', () => {
   });
 
   it('never throttles health probes', async () => {
-    const http = request(app.getHttpServer());
+    const http = api(app);
     for (let i = 0; i < 5; i += 1) await http.get('/api/v1/health/live').expect(200);
   });
 });
@@ -259,7 +258,7 @@ describe('production mode', () => {
   });
 
   it('does not expose the OpenAPI document', async () => {
-    const response = await request(app.getHttpServer()).get('/api/docs-json').expect(404);
+    const response = await api(app).get('/api/docs-json').expect(404);
 
     expect(response.body).toMatchObject({ code: 'NOT_FOUND' });
   });
@@ -278,7 +277,7 @@ describe('readiness without a database', () => {
   });
 
   it('fails readiness with TEMPORARILY_UNAVAILABLE but stays live', async () => {
-    const http = request(app.getHttpServer());
+    const http = api(app);
 
     const ready = await http.get('/api/v1/health/ready').expect(503);
     await http.get('/api/v1/health/live').expect(200);

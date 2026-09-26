@@ -1,7 +1,11 @@
-import { type Type } from '@nestjs/common';
+import { type Server } from 'node:http';
+import { type AddressInfo } from 'node:net';
+
+import { type INestApplication, type Type } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { Logger } from 'nestjs-pino';
+import request from 'supertest';
 import { inject } from 'vitest';
 
 import { ApiModule } from '../../src/api.module';
@@ -33,6 +37,18 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<NestE
   const app = moduleRef.createNestApplication<NestExpressApplication>(HTTP_APP_OPTIONS);
   app.useLogger(app.get(Logger));
   configureHttpApp(app);
-  await app.init();
+  // Listen once, explicitly on 127.0.0.1. Letting supertest call listen(0) per
+  // request binds the IPv6 wildcard, and macOS allows that on a port another
+  // process already holds on 127.0.0.1; supertest then connects to 127.0.0.1
+  // and talks to that process ("Parse Error: Expected HTTP/"). A specific
+  // IPv4 bind is always the listener 127.0.0.1 traffic reaches.
+  await app.listen(0, '127.0.0.1');
   return app;
+}
+
+/** supertest client for an app started by `createTestApp`. */
+export function api(app: INestApplication): ReturnType<typeof request> {
+  const server = app.getHttpServer() as Server;
+  const { address, port } = server.address() as AddressInfo;
+  return request(`http://${address}:${port}`);
 }
