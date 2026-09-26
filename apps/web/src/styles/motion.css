@@ -263,3 +263,32 @@
     }
   }
 }
+
+/* Row 7: phone summary bar slides up on the first pick and leaves the same way, faster. */
+@utility motion-summary-bar {
+  transition:
+    transform 300ms var(--ease-drawer),
+    visibility 0s linear 0s;
+
+  &:not([data-visible]) {
+    transform: translateY(100%);
+    visibility: hidden;
+    transition:
+      transform 200ms var(--ease-drawer),
+      visibility 0s linear 200ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition:
+      opacity 200ms var(--ease-out),
+      visibility 0s linear 0s;
+
+    &:not([data-visible]) {
+      transform: none;
+      opacity: 0;
+      transition:
+        opacity 200ms var(--ease-out),
+        visibility 0s linear 200ms;
+    }
+  }
+}

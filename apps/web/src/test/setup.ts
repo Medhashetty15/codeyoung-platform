@@ -1,8 +1,12 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 
 import { server } from './msw';
+
+// Route modules load lazily; the first import of each is transformed on demand, which can take
+// over a second when the whole suite runs in parallel.
+configure({ asyncUtilTimeout: 3000 });
 
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
@@ -44,4 +48,9 @@ if ('window' in globalThis && typeof window.IntersectionObserver !== 'function')
       return [];
     }
   } as unknown as typeof IntersectionObserver;
+}
+
+// jsdom does not implement scrolling.
+if ('window' in globalThis && typeof Element.prototype.scrollIntoView !== 'function') {
+  Element.prototype.scrollIntoView = () => {};
 }
