@@ -8,6 +8,7 @@ import { ApiError, isApiError } from '../../shared/api/ApiError';
 import { retryAfterSeconds, unreachableText, waitText } from '../../shared/api/error-copy';
 import { useCountdown } from '../../shared/hooks/useCountdown';
 import { useOnline } from '../../shared/hooks/useOnline';
+import { validateChild, type ChildErrors } from '../../shared/lib/child';
 import { Button } from '../../shared/ui/Button';
 import { Notice } from '../../shared/ui/Notice';
 import { notify } from '../../shared/ui/notify';
@@ -31,19 +32,6 @@ interface ConfirmPanelProps {
   onChangeSlot: (slot: Slot) => void;
 }
 
-const NAME_PATTERN = /^[\p{L}\p{M}][\p{L}\p{M} '.-]*$/u;
-
-function validateNewChild(child: NewChild): { firstName?: string; age?: string } {
-  const errors: { firstName?: string; age?: string } = {};
-  const name = child.firstName.trim();
-  if (!name) errors.firstName = "Enter your child's first name.";
-  else if (name.length > 50) errors.firstName = 'Use at most 50 characters.';
-  else if (!NAME_PATTERN.test(name))
-    errors.firstName = 'Use letters only, as on a school register.';
-  if (!child.age) errors.age = 'Choose an age.';
-  return errors;
-}
-
 function firstEligible(students: Student[]): string {
   return students.find((student) => student.upcomingTrial === null)?.id ?? NEW_CHILD;
 }
@@ -58,7 +46,7 @@ export function ConfirmPanel({ slot, onChangeSlot }: ConfirmPanelProps) {
   const create = useCreateBooking();
   const [choice, setChoice] = useState<string | null>(null);
   const [newChild, setNewChild] = useState<NewChild>({ firstName: '', age: '' });
-  const [childErrors, setChildErrors] = useState<{ firstName?: string; age?: string }>({});
+  const [childErrors, setChildErrors] = useState<ChildErrors>({});
   const [alternatives, setAlternatives] = useState<Slot[] | null>(null);
   // Mounted (closed) from the first submit, so a later 409 opens it with its enter transition.
   const [slotTakenMounted, setSlotTakenMounted] = useState(false);
@@ -160,7 +148,7 @@ export function ConfirmPanel({ slot, onChangeSlot }: ConfirmPanelProps) {
   const submit = () => {
     setSlotTakenMounted(true);
     if (selected === NEW_CHILD) {
-      const errors = validateNewChild(newChild);
+      const errors = validateChild(newChild);
       setChildErrors(errors);
       if (errors.firstName ?? errors.age) return;
     }
