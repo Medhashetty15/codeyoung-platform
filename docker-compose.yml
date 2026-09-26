@@ -1,5 +1,23 @@
 # Local infrastructure shared by every worktree (one set of containers per machine).
+# `docker compose up -d` starts PostgreSQL and Mailpit for development.
+# `docker compose --profile app up --build` also builds and runs the whole product
+# (migrate + demo seed, API, worker, web on http://localhost:8080); see docs/runbook.md.
 name: codeyoung
+
+# Settings of the `app` profile: production mode on local http. Override any value from
+# the shell; JWT_ACCESS_SECRET must be a real secret anywhere but this machine.
+x-app-env: &app-env
+  NODE_ENV: production
+  PORT: '3000'
+  DATABASE_URL: postgres://codeyoung:codeyoung@postgres:5432/codeyoung_app
+  WEB_BASE_URL: http://localhost:${APP_PORT:-8080}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-demo-only-change-me-0123456789abcdef}
+  SMTP_URL: smtp://mailpit:1025
+  # Caddy (web) is the one proxy in front of the API.
+  TRUST_PROXY_HOPS: '1'
+  LOG_LEVEL: info
+  # Browsers treat http://localhost as secure, so Secure cookies work (Safari excepted).
+  COOKIE_SECURE: 'true'
 
 services:
   postgres:
@@ -23,7 +41,7 @@ services:
     restart: unless-stopped
 
   mailpit:
-    image: axllent/mailpit:v1.27
+    image: axllent/mailpit:v1.31.2
     ports:
       - '1025:1025'
       - '8025:8025'
@@ -36,6 +54,64 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    restart: unless-stopped
+
+  # ---- The whole product (profile `app`) --------------------------------------------
+  migrate:
+    profiles: [app]
+    build: { context: ., target: api }
+    image: codeyoung-api:local
+    # Schema, then the demo mentors and parent. Seeding refuses production, so this
+    # one-off runs in development mode; the long-running services below do not.
+    command:
+      - sh
+      - -c
+      - node apps/api/dist/cli.js db:create && node apps/api/dist/cli.js db:migrate && node apps/api/dist/cli.js db:seed
+    environment:
+      <<: *app-env
+      NODE_ENV: development
+      LOG_PRETTY: 'false'
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: 'no'
+
+  api:
+    profiles: [app]
+    image: codeyoung-api:local
+    command: [node, apps/api/dist/main.js]
+    environment: *app-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      mailpit: { condition: service_healthy }
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/v1/health/ready').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  worker:
+    profiles: [app]
+    image: codeyoung-api:local
+    command: [node, apps/api/dist/worker.js]
+    environment: *app-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      mailpit: { condition: service_healthy }
+    restart: unless-stopped
+
+  web:
+    profiles: [app]
+    build: { context: ., target: web }
+    image: codeyoung-web:local
+    ports:
+      - '${APP_PORT:-8080}:8080'
+    depends_on:
+      api: { condition: service_healthy }
     restart: unless-stopped
 
 volumes:

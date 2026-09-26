@@ -1,0 +1,16 @@
+# Build context for the root Dockerfile: sources and manifests only.
+**/node_modules
+**/dist
+**/dist-*
+**/coverage
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+.worktrees
+.team
+docs
+apps/web/test-results
+apps/web/playwright-report
