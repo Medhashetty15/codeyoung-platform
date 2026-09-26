@@ -294,15 +294,21 @@ computeSlots({ range, now, config, mentors: [{ id, tz, maxPerDay, rules, timeOff
 1. **Expand rules → instants.** For each mentor-local date overlapping the range (±1 day), for each
    matching rule, convert `(date, start_local)` / `(date or date+1, end_local)` in the mentor's zone
    to instants with the DST policy (doc 04).
-2. **Subtract** time off and each confirmed booking's `[starts_at − buffer, blocked_until)`.
+2. **Subtract** time off and each confirmed booking's `[starts_at, blocked_until)`.
 3. **Discretise** on the UTC grid: slot `[t, t+60)` is valid if `[t, t+60+buffer)` fits in a free interval.
+   Together with step 2 this is exactly the `bookings_no_mentor_overlap` rule (the new booking's
+   `[t, blocked_until)` may not meet an existing one), so the engine and the database never disagree.
 4. **Cap**: drop a mentor's slots on any mentor-local date where confirmed count ≥ cap.
 5. **Lead time / horizon** filter against server `now`.
 6. **Union** across mentors.
 
 The HTTP layer groups by the requester's local date, sets day status (`AVAILABLE`, `FULLY_BOOKED`,
 `NO_AVAILABILITY`), `nextAvailable` (searches past the requested window up to the horizon) and DST
-transitions in range. Mentor identities never leave the server.
+transitions in range. Mentor identities never leave the server. Day status is judged on the bookable
+part of the day: mentors scheduled after the lead time but every slot taken (bookings or cap) is
+`FULLY_BOOKED`; no scheduled mentor time (none planned, time off, or only inside the lead time) is
+`NO_AVAILABILITY`. `from` may be at most one day before today and at most the horizon ahead (in `tz`,
+by the server clock); anything else is `400 VALIDATION_FAILED`.
 
 Scale note: 10 mentors × 14 days is trivial per request. At 100×: cache per (date) invalidated by
 booking/availability events, or materialise free slots.
@@ -544,7 +550,7 @@ used by the API for validation and by the web app for parsing); fixture builders
 | Method | Path | Notes |
 |--------|------|-------|
 | GET | `/availability/slots?from=YYYY-MM-DD&days=1..14&tz=IANA` | Days grouped in `tz`; see example below. `from` is optional (defaults to today in `tz` by the server clock), `days` defaults to 14 (PD-13). |
-| GET | `/meta/timezones` | `{ suggested: Zone[], all: Zone[] }`, `Zone = {id, city, country, group?: US \| UK \| IN}`; canonical ids, labels computed client side per date. |
+| GET | `/meta/timezones` | `{ suggested: Zone[], all: Zone[] }`, `Zone = {id, city, country, group?: US \| UK \| IN}`; every geographic zone of the IANA `zone.tab` plus UTC, canonical ids, English country names; labels computed client side per date. |
 | GET | `/meta/booking-config` | `{slotDurationMinutes, slotGridMinutes, horizonDays, leadTimeMinutes, rescheduleCutoffMinutes, classroomOpensMinutesBefore, mentorTimezone}` so the UI never hard-codes them (PD-03, PD-15). |
 
 ### Bookings — bearer, owner-scoped
