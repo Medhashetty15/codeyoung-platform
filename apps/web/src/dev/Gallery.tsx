@@ -1,4 +1,3 @@
-import { RadioGroup } from '@base-ui/react/radio-group';
 import { useState, type ReactNode } from 'react';
 
 import { parentAndChildPhoto, trialClassPhoto } from '../assets/photos';
@@ -6,6 +5,7 @@ import { useTheme, type ThemePreference } from '../shared/theme/theme';
 import { Accordion } from '../shared/ui/Accordion';
 import { Avatar } from '../shared/ui/Avatar';
 import { Button } from '../shared/ui/Button';
+import { ChoiceGroup } from '../shared/ui/ChoiceGroup';
 import { ConfirmedMark } from '../shared/ui/ConfirmedMark';
 import { CopyButton } from '../shared/ui/CopyButton';
 import { Countdown } from '../shared/ui/Countdown';
@@ -61,6 +61,9 @@ export function Component() {
   const [tab, setTab] = useState<'create' | 'login'>('create');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [password, setPassword] = useState('hannah2026');
+  const [date, setDate] = useState('2026-10-24');
+  const [time, setTime] = useState('5:00 PM');
+  const [child, setChild] = useState('leo');
 
   return (
     <main className="mx-auto flex max-w-content flex-col gap-10 px-4 py-10">
@@ -230,20 +233,22 @@ export function Component() {
           ]}
           currentId="account"
         />
-        <RadioGroup
-          aria-label="Date"
-          defaultValue="2026-10-24"
-          className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-1"
+        <ChoiceGroup
+          label="Date"
+          value={date}
+          onChange={setDate}
+          className="no-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-1"
         >
           {dates.map((d) => (
-            <DateChip key={d.value} {...d} />
+            <DateChip key={d.value} {...d} label={`${d.weekday} ${d.day}, ${d.availability}`} />
           ))}
-        </RadioGroup>
+        </ChoiceGroup>
         <div>
           <h3 className="mb-3 text-h3">Evening</h3>
-          <RadioGroup
-            aria-label="Time"
-            defaultValue="5:00 PM"
+          <ChoiceGroup
+            label="Time"
+            value={time}
+            onChange={setTime}
             className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5"
           >
             {slots.map((s) => (
@@ -254,7 +259,7 @@ export function Component() {
             <SlotChip value="current" current>
               8:00 PM
             </SlotChip>
-          </RadioGroup>
+          </ChoiceGroup>
         </div>
         <div className="grid gap-6 md:grid-cols-2">
           <TimeTray>
@@ -264,9 +269,10 @@ export function Component() {
             <p className="text-small text-ink-muted">60 min live class, free</p>
             <Button className="mt-5 w-full">Continue</Button>
           </TimeTray>
-          <RadioGroup
-            aria-label="Who is the class for?"
-            defaultValue="leo"
+          <ChoiceGroup
+            label="Who is the class for?"
+            value={child}
+            onChange={setChild}
             className="flex flex-col gap-2"
           >
             <RadioCard value="leo" label="Leo, 9" />
@@ -283,7 +289,7 @@ export function Component() {
                 </>
               }
             />
-          </RadioGroup>
+          </ChoiceGroup>
         </div>
         <div className="flex items-center gap-4">
           <ConfirmedMark />

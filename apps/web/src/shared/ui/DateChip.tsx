@@ -1,6 +1,6 @@
-import { Radio } from '@base-ui/react/radio';
-
 import { cn } from '../lib/cn';
+
+import { choiceFocusClassName, useChoice } from './choice-context';
 
 interface DateChipProps {
   /** Local date (YYYY-MM-DD); the radio value. */
@@ -11,24 +11,41 @@ interface DateChipProps {
   availability: string;
   /** Unavailable days stay focusable and selectable so they can explain why (doc 05 §5.1). */
   muted?: boolean;
+  /** Full name for assistive tech, e.g. "Saturday 24 October, 4 times available". */
+  label: string;
 }
 
-/** 64x72 date control for the date strip (a Base UI RadioGroup with native horizontal scroll). */
-export function DateChip({ value, weekday, day, availability, muted = false }: DateChipProps) {
+/** 72px-high date control for the date strip (a ChoiceGroup with native horizontal scroll). */
+export function DateChip({
+  value,
+  weekday,
+  day,
+  availability,
+  muted = false,
+  label,
+}: DateChipProps) {
+  const input = useChoice(value);
   return (
-    <Radio.Root
-      value={value}
+    <label
       data-muted={muted || undefined}
       className={cn(
-        'pressable flex h-18 min-w-16 shrink-0 snap-start px-2 flex-col items-center justify-center gap-0.5 rounded-control border border-line bg-surface',
+        'pressable flex h-18 min-w-16 shrink-0 cursor-pointer snap-start flex-col items-center justify-center gap-0.5 rounded-control border border-line bg-surface px-2 select-none',
         'text-ink hover:bg-sunken',
-        'data-checked:border-ink data-checked:bg-ink data-checked:text-canvas',
-        'data-muted:text-ink-faint data-muted:data-checked:text-canvas',
+        'has-checked:border-ink has-checked:bg-ink has-checked:text-canvas',
+        'data-muted:text-ink-faint data-muted:has-checked:text-canvas',
+        choiceFocusClassName,
       )}
     >
-      <span className="text-micro uppercase">{weekday}</span>
-      <span className="text-h2 tabular-nums">{day}</span>
-      <span className="text-micro font-normal whitespace-nowrap">{availability}</span>
-    </Radio.Root>
+      <input {...input} aria-label={label} />
+      <span aria-hidden className="text-micro uppercase">
+        {weekday}
+      </span>
+      <span aria-hidden className="text-h2 tabular-nums">
+        {day}
+      </span>
+      <span aria-hidden className="text-micro font-normal whitespace-nowrap">
+        {availability}
+      </span>
+    </label>
   );
 }

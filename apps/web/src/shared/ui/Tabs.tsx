@@ -44,7 +44,7 @@ export function Tabs<T extends string>({
     >
       <BaseTabs.List
         aria-label={label}
-        {...modality}
+        {...modality.props}
         className="group/tabs relative flex rounded-control bg-sunken p-1"
       >
         {items.map((item) => (

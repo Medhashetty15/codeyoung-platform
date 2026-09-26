@@ -60,3 +60,12 @@
     color: var(--accent-ink);
   }
 }
+
+/* Horizontal strips that scroll natively but show no bar; the clipped edge is the affordance. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
