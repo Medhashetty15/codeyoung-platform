@@ -61,7 +61,7 @@ export default defineConfig(
     rules: { 'no-restricted-syntax': 'off', 'no-restricted-properties': 'off' },
   },
   {
-    files: ['src/**/*.spec.{ts,tsx}', 'src/test/**', 'src/mocks/**'],
+    files: ['src/**/*.spec.{ts,tsx}', 'src/test/**', 'src/mocks/**', 'e2e/**'],
     rules: {
       'no-restricted-imports': 'off',
       // Vitest and Testing Library matchers are typed loosely.
@@ -71,7 +71,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['scripts/**', 'vite.config.ts', 'eslint.config.js'],
+    files: ['scripts/**', 'e2e/**', 'vite.config.ts', 'playwright.config.ts', 'eslint.config.js'],
     languageOptions: { globals: globals.node },
   },
 );

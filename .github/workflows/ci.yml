@@ -87,3 +87,69 @@ jobs:
           -e JWT_ACCESS_SECRET=ci-smoke-test-secret-at-least-32-bytes
           -e SMTP_URL=smtp://localhost:1025
           codeyoung-api:ci node apps/api/dist/cli.js config:print
+
+  e2e:
+    name: End-to-end (Playwright, London and Los Angeles)
+    runs-on: ubuntu-latest
+    # The built apps against real PostgreSQL and Mailpit (doc 02 §6, doc 05 §13).
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: codeyoung
+          POSTGRES_PASSWORD: codeyoung
+          POSTGRES_DB: codeyoung_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U codeyoung" --health-interval 5s --health-timeout 5s
+          --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.27
+        env:
+          MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+          MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+        ports: ['1025:1025', '8025:8025']
+    env:
+      NODE_ENV: development
+      PORT: '3001'
+      DATABASE_URL: postgres://codeyoung:codeyoung@localhost:5432/codeyoung_e2e
+      JWT_ACCESS_SECRET: ci-e2e-secret-at-least-32-bytes-long-0123
+      COOKIE_SECURE: 'false'
+      RATE_LIMIT_MULTIPLIER: '100'
+      WEB_BASE_URL: http://localhost:4173
+      SMTP_URL: smtp://localhost:1025
+      OUTBOX_POLL_MS: '500'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm run build
+      - run: npm run db:migrate
+      - name: Start the API and the worker
+        run: |
+          npm run start -w @app/api > api.log 2>&1 &
+          npm run start:worker -w @app/api > worker.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            curl -sf http://localhost:3001/api/v1/health/ready && exit 0
+            sleep 2
+          done
+          cat api.log
+          exit 1
+      # Nothing listens on 4173 here, so Playwright starts and owns `vite preview` itself.
+      - name: Playwright (seeds the e2e scenario per zone)
+        run: npm run e2e -w @app/web
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-report
+          path: |
+            apps/web/e2e-report
+            apps/web/e2e-results
+            api.log
+            worker.log
+          retention-days: 7

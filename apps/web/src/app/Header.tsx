@@ -1,10 +1,11 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 
 import { useSessionStatus } from '../features/auth';
 import { cn } from '../shared/lib/cn';
 import { buttonVariants } from '../shared/ui/button-variants';
 
+import { AccountMenuButton } from './AccountMenuButton';
 import { MobileNav } from './MobileNav';
 import { hasOwnZoneChip, isAuthPage, isBookingFlow } from './nav';
 import { loadAccountMenu } from './prefetch';
@@ -24,6 +25,16 @@ export function Header({ scrolled, zoneChip }: { scrolled: boolean; zoneChip?: R
   const status = useSessionStatus();
   const { pathname } = useLocation();
   const showBookCta = !isBookingFlow(pathname);
+  const [accountActive, setAccountActive] = useState(false);
+  const accountButton = (
+    <AccountMenuButton
+      onPointerEnter={() => void loadAccountMenu()}
+      onFocus={() => void loadAccountMenu()}
+      onClick={() => {
+        setAccountActive(true);
+      }}
+    />
+  );
 
   return (
     <header className="sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
@@ -56,11 +67,16 @@ export function Header({ scrolled, zoneChip }: { scrolled: boolean; zoneChip?: R
                 Log in
               </Link>
             )}
-            {status === 'authenticated' && (
-              <Suspense fallback={<span aria-hidden className="size-11" />}>
-                <AccountMenu />
-              </Suspense>
-            )}
+            {status === 'authenticated' &&
+              // The avatar button stays until pressed; the press mounts the menu already open, so
+              // no control is swapped under the pointer mid-click (the lost first click).
+              (accountActive ? (
+                <Suspense fallback={accountButton}>
+                  <AccountMenu defaultOpen />
+                </Suspense>
+              ) : (
+                accountButton
+              ))}
             {showBookCta && (
               <Link to="/book" className={cn(buttonVariants(), 'ml-1')}>
                 Book a free trial

@@ -2,7 +2,6 @@ import { Link } from 'react-router';
 
 import { logout, useMe } from '../features/auth';
 import { useTheme, type ThemePreference } from '../shared/theme/theme';
-import { Avatar } from '../shared/ui/Avatar';
 import { SignOutIcon, UserCircleIcon } from '../shared/ui/icons';
 import {
   Menu,
@@ -15,25 +14,18 @@ import {
   MenuSeparator,
 } from '../shared/ui/Menu';
 
-/** Initials avatar opening Account, Theme and Log out (doc 05 §3). */
-export function AccountMenu() {
+import { AccountMenuButton } from './AccountMenuButton';
+
+/**
+ * Initials avatar opening Account, Theme and Log out (doc 05 §3). `defaultOpen` opens it on mount
+ * when the avatar was pressed before this code had loaded.
+ */
+export function AccountMenu({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const { data: me } = useMe();
   const { preference, setPreference } = useTheme();
-  const name = me?.fullName ?? 'Your account';
 
   return (
-    <Menu
-      align="end"
-      trigger={
-        <button
-          type="button"
-          aria-label="Account menu"
-          className="pressable flex size-11 items-center justify-center rounded-full hover:bg-sunken"
-        >
-          <Avatar name={name} size="sm" />
-        </button>
-      }
-    >
+    <Menu align="end" defaultOpen={defaultOpen} trigger={<AccountMenuButton />}>
       {me && (
         <div className="px-3 pt-2 pb-2.5">
           <p className="text-small font-medium text-ink">{me.fullName}</p>

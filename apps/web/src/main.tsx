@@ -1,3 +1,6 @@
+// Must stay the first import: it configures zod before any schema module loads.
+import './zod-config';
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
