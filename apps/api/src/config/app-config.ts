@@ -24,12 +24,31 @@ export const envSchema = z
     LOG_PRETTY: z.stringbool().optional(),
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
     RATE_LIMIT_MULTIPLIER: z.coerce.number().positive().max(1000).default(1),
+    /** HS256 key for access tokens; at least 32 bytes. */
+    JWT_ACCESS_SECRET: z.string().min(32),
+    JWT_ACCESS_TTL_SEC: z.coerce.number().int().min(60).max(3600).default(900),
+    REFRESH_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+    SESSION_MAX_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+    REFRESH_REUSE_GRACE_SEC: z.coerce.number().int().min(0).max(120).default(20),
+    PASSWORD_RESET_TTL_MIN: z.coerce.number().int().min(5).max(1440).default(30),
+    LOGIN_LOCK_THRESHOLD: z.coerce.number().int().min(3).max(100).default(10),
+    LOGIN_LOCK_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+    /** Secure flag on the refresh cookie; false only for local http (WebKit drops it). */
+    COOKIE_SECURE: z.stringbool().default(true),
     /** Password of the seeded demo parent (`db:seed`); never used in production. */
     SEED_DEMO_PASSWORD: z.string().min(8).max(128).optional(),
   })
   .refine((env) => env.NODE_ENV !== 'production' || env.RATE_LIMIT_MULTIPLIER <= 1, {
     path: ['RATE_LIMIT_MULTIPLIER'],
     message: 'must not relax rate limits (> 1) in production',
+  })
+  .refine((env) => env.NODE_ENV !== 'production' || env.COOKIE_SECURE, {
+    path: ['COOKIE_SECURE'],
+    message: 'must be true in production',
+  })
+  .refine((env) => env.REFRESH_TTL_DAYS <= env.SESSION_MAX_DAYS, {
+    path: ['REFRESH_TTL_DAYS'],
+    message: 'must not exceed SESSION_MAX_DAYS',
   });
 
 export type Env = z.infer<typeof envSchema>;
@@ -55,6 +74,17 @@ export class AppConfig {
   readonly trustProxyHops: number;
   readonly rateLimitMultiplier: number;
   readonly seedDemoPassword: string | undefined;
+  readonly auth: {
+    readonly accessSecret: string;
+    readonly accessTtlSeconds: number;
+    readonly refreshTtlDays: number;
+    readonly sessionMaxDays: number;
+    readonly refreshReuseGraceSeconds: number;
+    readonly passwordResetTtlMinutes: number;
+    readonly loginLockThreshold: number;
+    readonly loginLockMinutes: number;
+    readonly cookieSecure: boolean;
+  };
 
   private constructor(env: Env) {
     this.nodeEnv = env.NODE_ENV;
@@ -67,6 +97,17 @@ export class AppConfig {
     this.trustProxyHops = env.TRUST_PROXY_HOPS;
     this.rateLimitMultiplier = env.RATE_LIMIT_MULTIPLIER;
     this.seedDemoPassword = env.SEED_DEMO_PASSWORD;
+    this.auth = {
+      accessSecret: env.JWT_ACCESS_SECRET,
+      accessTtlSeconds: env.JWT_ACCESS_TTL_SEC,
+      refreshTtlDays: env.REFRESH_TTL_DAYS,
+      sessionMaxDays: env.SESSION_MAX_DAYS,
+      refreshReuseGraceSeconds: env.REFRESH_REUSE_GRACE_SEC,
+      passwordResetTtlMinutes: env.PASSWORD_RESET_TTL_MIN,
+      loginLockThreshold: env.LOGIN_LOCK_THRESHOLD,
+      loginLockMinutes: env.LOGIN_LOCK_MINUTES,
+      cookieSecure: env.COOKIE_SECURE,
+    };
   }
 
   get isProduction(): boolean {
@@ -102,6 +143,8 @@ export class AppConfig {
       logLevel: this.logLevel,
       trustProxyHops: this.trustProxyHops,
       rateLimitMultiplier: this.rateLimitMultiplier,
+      accessTokenTtlSeconds: this.auth.accessTtlSeconds,
+      cookieSecure: this.auth.cookieSecure,
     };
   }
 }

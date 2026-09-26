@@ -9,6 +9,7 @@ describe('ConfigPrintCommand', () => {
     const write = vi.spyOn(process.stdout, 'write').mockReturnValue(true);
     const config = AppConfig.fromEnv({
       DATABASE_URL: 'postgres://codeyoung:s3cret@localhost:5433/codeyoung_dev',
+      JWT_ACCESS_SECRET: 'jwt-secret-that-is-at-least-32-bytes',
     });
 
     await new ConfigPrintCommand(config).run();
@@ -19,5 +20,6 @@ describe('ConfigPrintCommand', () => {
       database: 'postgres://localhost:5433/codeyoung_dev',
     });
     expect(output).not.toContain('s3cret');
+    expect(output).not.toContain('jwt-secret');
   });
 });

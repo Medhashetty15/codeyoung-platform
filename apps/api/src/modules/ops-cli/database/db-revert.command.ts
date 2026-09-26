@@ -29,7 +29,7 @@ export class DbRevertCommand extends CommandRunner {
       this.output.line('No migration to revert.');
       return;
     }
-    this.output.line(`Will revert ${last.name}. Its tables and data are dropped.`);
+    this.output.line(`Will revert ${last.name}. What it created, and the data in it, is dropped.`);
     if (!(await this.prompt.confirm('Revert it?', { yes: options.yes }))) {
       this.output.line('Nothing changed.');
       return;
