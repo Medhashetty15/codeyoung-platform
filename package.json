@@ -17,7 +17,7 @@
     "dev:api": "npm run dev -w @app/api",
     "dev:worker": "npm run dev:worker -w @app/api",
     "dev:web": "npm run dev -w @app/web",
-    "cli": "npm run cli -w @app/api --",
+    "cli": "npm run build:packages && npm run build -w @app/api && npm run cli -w @app/api --",
     "build": "npm run build --workspaces --if-present",
     "build:packages": "tsc -b packages/contracts/tsconfig.build.json packages/time/tsconfig.build.json",
     "lint": "eslint . --max-warnings 0",
@@ -28,7 +28,11 @@
     "test": "npm run test --workspaces --if-present",
     "test:int": "npm run test:int --workspaces --if-present",
     "infra:up": "docker compose up -d --wait",
-    "infra:down": "docker compose down"
+    "infra:down": "docker compose down",
+    "db:migrate": "npm run cli -- db:migrate",
+    "db:revert": "npm run cli -- db:revert",
+    "db:drift": "npm run cli -- db:drift",
+    "db:seed": "npm run cli -- db:seed"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -24,6 +24,8 @@ export const envSchema = z
     LOG_PRETTY: z.stringbool().optional(),
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(10).default(0),
     RATE_LIMIT_MULTIPLIER: z.coerce.number().positive().max(1000).default(1),
+    /** Password of the seeded demo parent (`db:seed`); never used in production. */
+    SEED_DEMO_PASSWORD: z.string().min(8).max(128).optional(),
   })
   .refine((env) => env.NODE_ENV !== 'production' || env.RATE_LIMIT_MULTIPLIER <= 1, {
     path: ['RATE_LIMIT_MULTIPLIER'],
@@ -52,6 +54,7 @@ export class AppConfig {
   readonly logPretty: boolean;
   readonly trustProxyHops: number;
   readonly rateLimitMultiplier: number;
+  readonly seedDemoPassword: string | undefined;
 
   private constructor(env: Env) {
     this.nodeEnv = env.NODE_ENV;
@@ -63,6 +66,7 @@ export class AppConfig {
     this.logPretty = env.LOG_PRETTY ?? env.NODE_ENV === 'development';
     this.trustProxyHops = env.TRUST_PROXY_HOPS;
     this.rateLimitMultiplier = env.RATE_LIMIT_MULTIPLIER;
+    this.seedDemoPassword = env.SEED_DEMO_PASSWORD;
   }
 
   get isProduction(): boolean {
