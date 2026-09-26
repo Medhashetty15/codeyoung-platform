@@ -18,6 +18,7 @@ import {
 import { connectMigrated, createTestDatabase, single, type TestDatabase } from './support/database';
 import { cookieHeader, refreshCookie, requireRefreshCookie } from './support/http-cookies';
 import { ManualClock } from './support/manual-clock';
+import { RolesProbeController } from './support/probe.controller';
 import { api, createTestApp, TEST_JWT_SECRET } from './support/test-app';
 
 const PASSWORD = 'violet-harbour-lantern';
@@ -35,6 +36,7 @@ beforeAll(async () => {
     clock,
     // Relaxed per-IP and per-email limits: this suite exercises lockout, not throttling.
     env: { DATABASE_URL: database.url, RATE_LIMIT_MULTIPLIER: '100' },
+    controllers: [RolesProbeController],
   });
 });
 
@@ -259,6 +261,19 @@ describe('access tokens', () => {
     const expired = await me(accessToken).expect(401);
 
     expect(expired.body).toMatchObject({ code: 'UNAUTHENTICATED' });
+  });
+
+  it('open routes for their role only; another role reads as not found (docs/03 §6.4)', async () => {
+    const { accessToken } = await signedUp();
+    const bearer = `Bearer ${accessToken}`;
+
+    await api(app).get('/api/v1/__probe/roles/parents').set('Authorization', bearer).expect(200);
+    const denied = await api(app)
+      .get('/api/v1/__probe/roles/staff')
+      .set('Authorization', bearer)
+      .expect(404);
+    expect(ProblemSchema.parse(denied.body).code).toBe('NOT_FOUND');
+    await api(app).get('/api/v1/__probe/roles/staff').expect(401);
   });
 
   it('are required on protected routes', async () => {

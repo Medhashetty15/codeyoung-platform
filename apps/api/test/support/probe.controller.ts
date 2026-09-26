@@ -5,7 +5,9 @@ import { z } from 'zod';
 import { ErrorCode, IanaZoneSchema } from '@app/contracts';
 
 import { Public } from '../../src/common/auth/public.decorator';
+import { Roles } from '../../src/common/auth/roles.decorator';
 import { AppError } from '../../src/common/errors/app-error';
+import { type UserRole } from '../../src/modules/users/infra/user.entity';
 
 class ProbeBodyDto extends createZodDto(
   z.object({
@@ -46,5 +48,22 @@ export class ProbeController {
   @Get('unavailable')
   unavailable(): never {
     throw new HttpException('lock timeout', 503);
+  }
+}
+
+/** Test-only routes behind the global guard, to exercise `@Roles()` (docs/03 §6.4). */
+@Controller('__probe/roles')
+export class RolesProbeController {
+  @Get('parents')
+  @Roles('PARENT')
+  parents(): { ok: true } {
+    return { ok: true };
+  }
+
+  @Get('staff')
+  // No such role exists yet (MVP has PARENT only); it stands for a future MENTOR or ADMIN.
+  @Roles('ADMIN' as UserRole)
+  staff(): { ok: true } {
+    return { ok: true };
   }
 }
