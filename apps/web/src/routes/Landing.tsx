@@ -78,8 +78,8 @@ export function Component() {
             style={stagger(1)}
             className="motion-hero-in max-w-[44ch] text-body text-ink-muted sm:text-h3 sm:font-normal"
           >
-            Choose a time in your time zone and your child gets a live one-on-one class with a
-            mentor.
+            Choose a time in your time zone and your child gets a live{' '}
+            <span className="whitespace-nowrap">one-on-one</span> class with a mentor.
           </p>
           <Link
             to="/book"

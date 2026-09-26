@@ -72,6 +72,11 @@ Design-taste rules apply here (landing surface): dials 6 / 4 / 3, no centered he
 | 4 | **Questions** | Narrow heading column + accordion | Is it really free? How long is the class? What does my child need? Can I reschedule? Which ages is it for? |
 | 5 | **Closing CTA** | Left-aligned statement strip | "Ready when you are." + "Book a free trial" (same label as hero). |
 
+Family hours (PD-39): the hero Time Tray and the section 3 readout prefer slots that start from 07:00 and
+before 21:00 in the display zone (`FAMILY_HOURS`), because IST mentor windows put many slots in the small
+hours for US families and "4:00 AM" as a first impression reads as "not for us". With no such slot in the
+horizon they fall back to the plain next times. Pick a time always lists every slot, Night group included.
+
 Motion: hero entrance and once-only section reveals (doc 07 §7.3 rows 19, 20). Nothing loops.
 
 ```

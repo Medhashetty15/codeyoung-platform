@@ -4,8 +4,9 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildBookingConfig, slotsScenarios } from '@app/contracts/testing';
-import { formatDate, formatTime } from '@app/time';
+import { formatDate, formatTime, localHour } from '@app/time';
 
+import { nextFreeTimes } from '../features/landing/next-free-times';
 import { useZoneStore } from '../features/timezone/zone-store';
 import { server } from '../test/msw';
 import { renderApp } from '../test/render-app';
@@ -41,7 +42,7 @@ describe('landing', () => {
       'div',
     )!.parentElement!;
     expect(within(tray).getByText('London time (GMT+1)')).toBeInTheDocument();
-    const first = response.days.flatMap((day) => day.slots)[0]!;
+    const first = nextFreeTimes(response, 1, 'Europe/London')[0]!;
     const links = await within(tray).findAllByRole('link', { name: /^\w{3} \d{1,2} \w{3}/ });
     expect(links).toHaveLength(4);
     expect(links[0]).toHaveTextContent(
@@ -53,6 +54,25 @@ describe('landing', () => {
       expect(router.state.location.pathname).toBe('/book/confirm');
     });
     expect(new URLSearchParams(router.state.location.search).get('slot')).toBe(first.start);
+  });
+
+  it('shows a New York visitor daytime times first, not the small hours', async () => {
+    useZoneStore.setState({ chosen: 'America/New_York', saved: null });
+    const response = slotsScenarios.available();
+    server.use(http.get('/api/v1/availability/slots', () => HttpResponse.json(response)));
+    open();
+    const tray = (await screen.findByRole('heading', { name: 'Next free times' })).closest(
+      'div',
+    )!.parentElement!;
+    const links = await within(tray).findAllByRole('link', { name: /^\w{3} \d{1,2} \w{3}/ });
+    const starts = links.map((link) =>
+      new URLSearchParams(link.getAttribute('href')!.split('?')[1]).get('slot')!,
+    );
+    for (const start of starts) {
+      const hour = localHour(start, 'America/New_York');
+      expect(hour).toBeGreaterThanOrEqual(7);
+      expect(hour).toBeLessThan(21);
+    }
   });
 
   it('offers the waitlist in the tray when nothing is free', async () => {
@@ -73,7 +93,7 @@ describe('landing', () => {
     const response = slotsScenarios.available();
     server.use(http.get('/api/v1/availability/slots', () => HttpResponse.json(response)));
     open();
-    const first = response.days.flatMap((day) => day.slots)[0]!;
+    const first = nextFreeTimes(response, 1, 'Europe/London')[0]!;
     const band = await screen.findByRole('region', {
       name: 'Every time is shown in your time zone',
     });

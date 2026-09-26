@@ -25,7 +25,7 @@ export function NextFreeTimes() {
   const { zone, locale } = useDisplayZone();
   const slots = useQuery(slotsQuery(zone));
   const config = useQuery(bookingConfigQuery());
-  const times = slots.data ? nextFreeTimes(slots.data, 4) : [];
+  const times = slots.data ? nextFreeTimes(slots.data, 4, zone) : [];
   const allTimes = `/book?tz=${encodeURIComponent(zone)}`;
 
   return (

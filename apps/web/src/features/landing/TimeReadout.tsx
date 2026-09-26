@@ -25,7 +25,7 @@ export function TimeReadout() {
   const { zone, locale } = useDisplayZone();
   const slots = useQuery(slotsQuery(zone));
   const config = useQuery(bookingConfigQuery());
-  const next = slots.data ? nextFreeTimes(slots.data, 1)[0] : undefined;
+  const next = slots.data ? nextFreeTimes(slots.data, 1, zone)[0] : undefined;
   const mentorZone = config.data?.mentorTimezone;
 
   if (slots.isPending || config.isPending) {
