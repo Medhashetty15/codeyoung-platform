@@ -9,6 +9,7 @@ import {
   findSlot,
   firstTransition,
   groupByPartOfDay,
+  horizonPhrase,
   isWindowEmpty,
   nextFreeAfter,
   nextFreeLabel,
@@ -105,5 +106,15 @@ describe('slot logic', () => {
       offsetBefore: '+01:00',
       offsetAfter: '+00:00',
     });
+  });
+});
+
+describe('horizonPhrase', () => {
+  it.each([
+    [14, 'two weeks'],
+    [7, 'one week'],
+    [10, '10 days'],
+  ])('%i days reads %j', (days, phrase) => {
+    expect(horizonPhrase(days)).toBe(phrase);
   });
 });

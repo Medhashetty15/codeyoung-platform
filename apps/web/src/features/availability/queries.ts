@@ -1,6 +1,11 @@
 import { queryOptions } from '@tanstack/react-query';
 
-import { SlotsResponseSchema, type SlotsResponse } from '@app/contracts';
+import {
+  BookingConfigSchema,
+  SlotsResponseSchema,
+  type BookingConfig,
+  type SlotsResponse,
+} from '@app/contracts';
 
 import { api } from '../../shared/api/client';
 import { qk } from '../../shared/api/query-keys';
@@ -21,5 +26,19 @@ export function slotsQuery(tz: string) {
       }),
     staleTime: 30_000,
     refetchInterval: 60_000,
+  });
+}
+
+/** Business settings the UI must never hard-code (doc 05 §12.2). Rarely changes. */
+export function bookingConfigQuery() {
+  return queryOptions({
+    queryKey: qk.meta.bookingConfig(),
+    queryFn: ({ signal }) =>
+      api<BookingConfig>('/meta/booking-config', {
+        auth: false,
+        signal,
+        schema: import.meta.env.DEV ? BookingConfigSchema : undefined,
+      }),
+    staleTime: 60 * 60_000,
   });
 }

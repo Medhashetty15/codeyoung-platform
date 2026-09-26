@@ -77,3 +77,10 @@ export function firstTransition(response: SlotsResponse) {
 export function nextFreeLabel(slot: Slot, zone: string, locale: string): string {
   return `Next free time: ${formatDateTime(slot.start, zone, locale)}`;
 }
+
+/** The booking horizon in words for copy: 14 "two weeks", 7 "one week", else "N days" (PD-31). */
+export function horizonPhrase(days: number): string {
+  if (days === 14) return 'two weeks';
+  if (days === 7) return 'one week';
+  return `${String(days)} days`;
+}

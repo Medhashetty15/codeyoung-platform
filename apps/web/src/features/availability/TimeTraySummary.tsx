@@ -10,10 +10,13 @@ interface TimeTraySummaryProps {
   slot: Slot | null;
   zone: string;
   locale: string;
-  actionLabel: string;
-  onAction: () => void;
+  /** Primary action under the details (Continue, Move trial); omit on the confirm page. */
+  actionLabel?: string;
+  onAction?: () => void;
   /** Above the time, e.g. the reschedule "Moving from" line. */
   children?: ReactNode;
+  /** Under the details, e.g. a "Change time" link. */
+  footer?: ReactNode;
 }
 
 /** The booking summary in the Time Tray (doc 05 §5.1, doc 07 §4 signature element). */
@@ -24,6 +27,7 @@ export function TimeTraySummary({
   actionLabel,
   onAction,
   children,
+  footer,
 }: TimeTraySummaryProps) {
   if (!slot) {
     return (
@@ -45,9 +49,12 @@ export function TimeTraySummary({
         {formatTimeRange(slot.start, slot.end, zone, locale)} {zoneParts(zone, slot.start).name}
       </p>
       <p className="text-small text-ink-muted">{String(minutes)} min live class, free</p>
-      <Button onClick={onAction} className="mt-5 w-full">
-        {actionLabel}
-      </Button>
+      {actionLabel && onAction && (
+        <Button onClick={onAction} className="mt-5 w-full">
+          {actionLabel}
+        </Button>
+      )}
+      {Boolean(footer) && <div className="mt-4">{footer}</div>}
     </TimeTray>
   );
 }
