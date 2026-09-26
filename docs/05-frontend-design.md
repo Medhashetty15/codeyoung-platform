@@ -148,7 +148,8 @@ the first selection: "Sat 24 Oct, 5:00 PM" + "Continue".
 Behaviour:
 - **Date strip:** 14 date chips in the parent's zone, native horizontal scroll with snap. Unavailable
   days stay visible and focusable (they show why). Default selection: `?date`, else first day with times.
-- **Slot grid:** grouped Morning / Afternoon / Evening by local hour; 2 columns under 480px, 3 up to
+- **Slot grid:** grouped Night (00:00 to 05:59) / Morning / Afternoon / Evening by local hour (Night exists because
+  IST mentor windows put some slots after midnight for US and UK parents, PD-31); 2 columns under 480px, 3 up to
   768px, 4 to 5 above. Radiogroup semantics, arrow keys move selection (no animation when keyboard-driven).
 - **Day notices** (inside the grid area, composed empty state):
   - Full: "Every mentor is booked on Sunday 25 October." + action "Next free time: Tue 27 Oct, 5:00 PM".
