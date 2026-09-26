@@ -62,7 +62,7 @@ export default defineConfig(
     rules: { 'no-restricted-imports': ['error', { patterns: DOMAIN_FORBIDDEN_IMPORTS }] },
   },
   {
-    files: ['apps/api/**/*.spec.ts', 'apps/api/test/**/*.ts'],
+    files: ['**/*.spec.ts', 'apps/api/test/**/*.ts'],
     rules: {
       // Vitest matchers (expect.any etc.) are typed as any.
       '@typescript-eslint/no-unsafe-assignment': 'off',
