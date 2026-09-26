@@ -89,6 +89,19 @@ export class UsersRepository {
     );
   }
 
+  /**
+   * The zone the parent confirmed while booking becomes the profile zone, so
+   * emails and reminders follow it (A-11).
+   */
+  async syncTimezone(id: string, timezone: string): Promise<void> {
+    await this.manager
+      .createQueryBuilder()
+      .update(UserEntity)
+      .set({ timezone })
+      .where('id = :id AND timezone <> :timezone', { id, timezone })
+      .execute();
+  }
+
   /** Successful login: counters cleared, hash upgraded when the parameters changed. */
   async recordLogin(id: string, at: Temporal.Instant, newPasswordHash?: string): Promise<void> {
     await this.manager.update(

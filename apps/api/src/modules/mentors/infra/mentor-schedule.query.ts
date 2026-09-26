@@ -16,7 +16,6 @@ export interface MentorRule {
 
 export interface MentorScheduleRecord {
   id: string;
-  firstName: string;
   timezone: string;
   maxTrialsPerDay: number;
   rules: MentorRule[];
@@ -76,7 +75,6 @@ export class MentorScheduleQuery {
 
     return mentors.map((mentor) => ({
       id: mentor.id,
-      firstName: mentor.fullName.split(' ')[0] ?? mentor.fullName,
       timezone: mentor.timezone,
       maxTrialsPerDay: mentor.maxTrialsPerDay,
       rules: rules

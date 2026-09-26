@@ -27,9 +27,10 @@ export class ConfirmedBookingsQuery {
     mentorIds: readonly string[],
     from: Temporal.Instant,
     to: Temporal.Instant,
+    excludeBookingId?: string,
   ): Promise<MentorBooking[]> {
     if (mentorIds.length === 0) return [];
-    const rows = await this.manager
+    const query = this.manager
       .createQueryBuilder(BookingEntity, 'booking')
       .select([
         'booking.mentorId',
@@ -42,8 +43,12 @@ export class ConfirmedBookingsQuery {
       .andWhere('booking.startsAt >= :from AND booking.startsAt < :to', {
         from: toDate(from),
         to: toDate(to),
-      })
-      .getMany();
+      });
+    // A booking being rescheduled no longer counts against its own new slot.
+    if (excludeBookingId !== undefined) {
+      query.andWhere('booking.id <> :excludeBookingId', { excludeBookingId });
+    }
+    const rows = await query.getMany();
     return rows.map((row) => ({
       mentorId: row.mentorId,
       startsAt: fromDate(row.startsAt),
