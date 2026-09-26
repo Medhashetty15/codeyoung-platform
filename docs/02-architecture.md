@@ -85,7 +85,7 @@ flowchart LR
 | Validation | zod + `nestjs-zod` | One schema language shared with the frontend. |
 | Auth | `@nestjs/jwt`, `argon2`, opaque rotating refresh tokens | Standard, revocable, no Passport indirection needed. |
 | Time | Temporal API via `temporal-polyfill`, wrapped in `packages/time` | Explicit DST disambiguation. |
-| Jobs | Outbox table + worker (`@nestjs/schedule` inside worker only) | Atomic with business writes; no Redis. |
+| Jobs | Outbox table + worker (own `JobScheduler` inside the worker only, PD-34) | Atomic with business writes; no Redis. |
 | Email | Nodemailer + Handlebars + `juice` + `ics` | Provider-agnostic; Mailpit locally. |
 | CLI | `nest-commander` | Reuses the same services & DI graph. |
 | Logging | `nestjs-pino` | JSON, request-id correlation, PII redaction. |
@@ -174,9 +174,11 @@ sequenceDiagram
 ## 6. Environments & deployment
 
 - **Local**: `docker compose up -d` (Postgres, Mailpit) → `npm run db:migrate` → `npm run cli -- db:seed`
-  → `npm run dev` (API + worker + web in parallel). Mailpit UI at `localhost:8025`.
-- **CI**: Testcontainers Postgres; Playwright against built apps.
-- **Production (suggested)**: multi-stage Dockerfiles; API and worker as separate services; migrations
+  → `npm run dev` (API + worker + web in parallel). Mailpit UI at `localhost:8025`. Or the whole
+  product without Node: `docker compose --profile app up --build` (http://localhost:8080).
+- **CI**: Testcontainers Postgres and Mailpit; Playwright against built apps; both Docker images built.
+- **Production (suggested)**: the root multi-stage Dockerfile (`api` image for API, worker and CLI;
+  `web` image on Caddy); API and worker as separate services; migrations
   as a one-off release task; managed Postgres with PITR; SES; SPA and API behind one domain
   (CDN/reverse proxy, `/api` → API) so the refresh cookie stays same-site; secrets from the platform store.
 
