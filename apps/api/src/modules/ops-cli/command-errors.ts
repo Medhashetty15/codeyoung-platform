@@ -3,8 +3,18 @@ import { SeedRefusedError } from '../../database/seed/database-seeder';
 
 import { ConfirmationRequiredError } from './prompt';
 
+/** A command option with a value the command does not accept. */
+export class InvalidOptionError extends Error {
+  override readonly name = 'InvalidOptionError';
+}
+
 // Operator mistakes: a message is enough. Anything else keeps its stack trace.
-const EXPECTED_ERRORS = [ConfirmationRequiredError, SeedRefusedError, ConfigValidationError];
+const EXPECTED_ERRORS = [
+  ConfirmationRequiredError,
+  SeedRefusedError,
+  ConfigValidationError,
+  InvalidOptionError,
+];
 
 /** Prints a failed command's error and makes the process exit non-zero. */
 export function reportCommandError(error: Error): void {

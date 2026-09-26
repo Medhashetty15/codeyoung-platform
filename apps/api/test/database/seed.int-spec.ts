@@ -15,11 +15,13 @@ import {
 import { AppConfig } from '../../src/config/app-config';
 import { MIGRATIONS } from '../../src/database/migrations';
 import { DatabaseSeeder, SeedRefusedError } from '../../src/database/seed/database-seeder';
+import { type E2eScenarioSeeder } from '../../src/database/seed/e2e-scenario';
 import {
   DEFAULT_DEMO_PASSWORD,
   SEED_MENTORS,
   SEED_PARENT,
 } from '../../src/database/seed/seed-data';
+import { InvalidOptionError } from '../../src/modules/ops-cli/command-errors';
 import { DbDriftCommand } from '../../src/modules/ops-cli/database/db-drift.command';
 import { DbRevertCommand } from '../../src/modules/ops-cli/database/db-revert.command';
 import { DbSeedCommand } from '../../src/modules/ops-cli/database/db-seed.command';
@@ -200,6 +202,8 @@ describe('DatabaseSeeder', () => {
 
 describe('database commands', () => {
   const seeder = () => new DatabaseSeeder(db, new PasswordHasher(), config());
+  // These tests never ask for a scenario.
+  const noScenario = {} as E2eScenarioSeeder;
 
   it('db:seed --reset asks before deleting and does nothing on no', async () => {
     await seeder().seed({ reset: true });
@@ -207,7 +211,7 @@ describe('database commands', () => {
     const { output, lines } = fakeOutput();
     const { prompt, confirm } = fakePrompt(false);
 
-    await new DbSeedCommand(seeder(), prompt, output).run([], { reset: true });
+    await new DbSeedCommand(seeder(), noScenario, prompt, output).run([], { reset: true });
 
     expect(confirm).toHaveBeenCalledWith('Delete all this data?', { yes: false });
     expect(lines.at(-1)).toBe('Nothing changed.');
@@ -217,13 +221,25 @@ describe('database commands', () => {
   it('db:seed reports what it created', async () => {
     const { output, lines } = fakeOutput();
 
-    await new DbSeedCommand(seeder(), fakePrompt(true).prompt, output).run([], {
+    await new DbSeedCommand(seeder(), noScenario, fakePrompt(true).prompt, output).run([], {
       reset: true,
       yes: true,
     });
 
     expect(lines).toContain('Mentors: 10 created, 0 already present (53 availability rules).');
     expect(lines).toContain(`Demo parent ${SEED_PARENT.email} created with 2 children.`);
+  });
+
+  it('db:seed refuses unknown scenarios and zones before touching data', async () => {
+    const { output } = fakeOutput();
+    const { prompt, confirm } = fakePrompt(true);
+    const command = new DbSeedCommand(seeder(), noScenario, prompt, output);
+
+    await expect(command.run([], { scenario: 'demo' })).rejects.toBeInstanceOf(InvalidOptionError);
+    await expect(command.run([], { scenario: 'e2e', tz: 'Mars/Olympus' })).rejects.toThrow(
+      'Unknown time zone "Mars/Olympus"',
+    );
+    expect(confirm).not.toHaveBeenCalled();
   });
 
   it('db:drift reports no drift on a migrated database', async () => {
