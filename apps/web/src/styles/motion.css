@@ -193,6 +193,27 @@
   }
 }
 
+/* Row 19: landing hero entrance on first view; `--stagger` is the element's order (60ms apart). */
+@utility motion-hero-in {
+  transition:
+    opacity 500ms var(--ease-out),
+    transform 500ms var(--ease-out);
+  transition-delay: calc(var(--stagger, 0) * 60ms);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition-property: opacity;
+
+    @starting-style {
+      transform: none;
+    }
+  }
+}
+
 /* Row 20: once-only landing reveals; `data-revealed` is set by an IntersectionObserver. */
 @utility reveal {
   @media (prefers-reduced-motion: no-preference) {
