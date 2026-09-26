@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
+import { IanaZoneSchema } from '@app/contracts';
+import { canonicalZone } from '@app/time';
+
 const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'] as const;
+const MINUTES_PER_DAY = 1440;
 
 const commaSeparated = z
   .string()
@@ -35,6 +39,16 @@ export const envSchema = z
     LOGIN_LOCK_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
     /** Secure flag on the refresh cookie; false only for local http (WebKit drops it). */
     COOKIE_SECURE: z.stringbool().default(true),
+    TRIAL_DURATION_MIN: z.coerce.number().int().min(15).max(240).default(60),
+    SLOT_GRID_MIN: z.coerce.number().int().min(5).max(120).default(30),
+    MENTOR_BUFFER_MIN: z.coerce.number().int().min(0).max(120).default(15),
+    BOOKING_LEAD_TIME_MIN: z.coerce.number().int().min(0).max(10_080).default(240),
+    BOOKING_HORIZON_DAYS: z.coerce.number().int().min(1).max(60).default(14),
+    RESCHEDULE_CUTOFF_MIN: z.coerce.number().int().min(0).max(10_080).default(120),
+    DEFAULT_MAX_TRIALS_PER_DAY: z.coerce.number().int().min(1).max(20).default(2),
+    CLASSROOM_OPENS_MIN_BEFORE: z.coerce.number().int().min(0).max(120).default(10),
+    /** Zone the UI shows for mentors, e.g. "Your mentor: Sat 9:30 PM India time" (PD-03). */
+    MENTOR_DISPLAY_TIMEZONE: IanaZoneSchema.default(canonicalZone('Asia/Kolkata')),
     /** Password of the seeded demo parent (`db:seed`); never used in production. */
     SEED_DEMO_PASSWORD: z.string().min(8).max(128).optional(),
   })
@@ -49,6 +63,15 @@ export const envSchema = z
   .refine((env) => env.REFRESH_TTL_DAYS <= env.SESSION_MAX_DAYS, {
     path: ['REFRESH_TTL_DAYS'],
     message: 'must not exceed SESSION_MAX_DAYS',
+  })
+  // Slots sit on a UTC grid (A-3): the grid must tile a day and the class length.
+  .refine((env) => MINUTES_PER_DAY % env.SLOT_GRID_MIN === 0, {
+    path: ['SLOT_GRID_MIN'],
+    message: 'must divide 1440 (a day)',
+  })
+  .refine((env) => env.TRIAL_DURATION_MIN % env.SLOT_GRID_MIN === 0, {
+    path: ['TRIAL_DURATION_MIN'],
+    message: 'must be a multiple of SLOT_GRID_MIN',
   });
 
 export type Env = z.infer<typeof envSchema>;
@@ -74,6 +97,18 @@ export class AppConfig {
   readonly trustProxyHops: number;
   readonly rateLimitMultiplier: number;
   readonly seedDemoPassword: string | undefined;
+  /** Business knobs of booking (docs/03 §11); exposed at /meta/booking-config. */
+  readonly booking: {
+    readonly trialDurationMinutes: number;
+    readonly slotGridMinutes: number;
+    readonly mentorBufferMinutes: number;
+    readonly leadTimeMinutes: number;
+    readonly horizonDays: number;
+    readonly rescheduleCutoffMinutes: number;
+    readonly defaultMaxTrialsPerDay: number;
+    readonly classroomOpensMinutesBefore: number;
+    readonly mentorDisplayTimezone: string;
+  };
   readonly auth: {
     readonly accessSecret: string;
     readonly accessTtlSeconds: number;
@@ -97,6 +132,17 @@ export class AppConfig {
     this.trustProxyHops = env.TRUST_PROXY_HOPS;
     this.rateLimitMultiplier = env.RATE_LIMIT_MULTIPLIER;
     this.seedDemoPassword = env.SEED_DEMO_PASSWORD;
+    this.booking = {
+      trialDurationMinutes: env.TRIAL_DURATION_MIN,
+      slotGridMinutes: env.SLOT_GRID_MIN,
+      mentorBufferMinutes: env.MENTOR_BUFFER_MIN,
+      leadTimeMinutes: env.BOOKING_LEAD_TIME_MIN,
+      horizonDays: env.BOOKING_HORIZON_DAYS,
+      rescheduleCutoffMinutes: env.RESCHEDULE_CUTOFF_MIN,
+      defaultMaxTrialsPerDay: env.DEFAULT_MAX_TRIALS_PER_DAY,
+      classroomOpensMinutesBefore: env.CLASSROOM_OPENS_MIN_BEFORE,
+      mentorDisplayTimezone: env.MENTOR_DISPLAY_TIMEZONE,
+    };
     this.auth = {
       accessSecret: env.JWT_ACCESS_SECRET,
       accessTtlSeconds: env.JWT_ACCESS_TTL_SEC,

@@ -109,6 +109,37 @@ describe('AppConfig.fromEnv', () => {
     });
   });
 
+  it('applies the documented booking defaults', () => {
+    expect(AppConfig.fromEnv(BASE).booking).toEqual({
+      trialDurationMinutes: 60,
+      slotGridMinutes: 30,
+      mentorBufferMinutes: 15,
+      leadTimeMinutes: 240,
+      horizonDays: 14,
+      rescheduleCutoffMinutes: 120,
+      defaultMaxTrialsPerDay: 2,
+      classroomOpensMinutesBefore: 10,
+      mentorDisplayTimezone: 'Asia/Kolkata',
+    });
+  });
+
+  it('keeps the slot grid consistent with days and class length', () => {
+    expect(() => AppConfig.fromEnv({ ...BASE, SLOT_GRID_MIN: '35' })).toThrow(/SLOT_GRID_MIN/);
+    expect(() => AppConfig.fromEnv({ ...BASE, TRIAL_DURATION_MIN: '45' })).toThrow(
+      /TRIAL_DURATION_MIN/,
+    );
+  });
+
+  it('canonicalises the mentor display zone', () => {
+    expect(
+      AppConfig.fromEnv({ ...BASE, MENTOR_DISPLAY_TIMEZONE: 'Asia/Calcutta' }).booking
+        .mentorDisplayTimezone,
+    ).toBe('Asia/Kolkata');
+    expect(() => AppConfig.fromEnv({ ...BASE, MENTOR_DISPLAY_TIMEZONE: 'Mars/Olympus' })).toThrow(
+      /MENTOR_DISPLAY_TIMEZONE/,
+    );
+  });
+
   it('requires a long JWT secret without echoing it', () => {
     const attempt = () => AppConfig.fromEnv({ DATABASE_URL, JWT_ACCESS_SECRET: 'short-secret' });
 
