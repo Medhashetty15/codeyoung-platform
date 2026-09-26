@@ -49,11 +49,11 @@ bookings/
 
 | Rule | Why |
 |------|-----|
-| `synchronize: false`, `migrationsRun: false`. Migrations run as an explicit deploy step (`npm run db:migrate`). | Never let the ORM mutate prod schema implicitly. |
+| `synchronize: false`, `migrationsRun: false`, `installExtensions: false`. Migrations run as an explicit deploy step (`npm run db:migrate`, history in `schema_migrations`), each in its own transaction. | Never let the ORM mutate prod schema implicitly. |
 | Migrations are generated, then **reviewed and hand-edited**. Extensions, the exclusion constraint and CHECKs live in hand-written SQL inside migrations. | TypeORM's diffing is noisy; SQL is the source of truth. |
-| Entities still declare `@Exclusion`, `@Check`, `@Index({ where })` so the generator sees no drift. CI runs `migration:generate --check` to fail on drift. | Keeps entities and DB in sync. |
+| Entities still declare `@Exclusion`, `@Check`, `@Index({ where })` (and `@ForeignKey` instead of relations) so the generator sees no drift; indexes the decorators cannot express (expressions, `DESC`) are `synchronize: false`. The integration suite fails on drift (TypeORM's schema builder must have nothing to do after the migrations), and `npm run db:drift` runs the same check against any database. | Keeps entities and DB in sync. |
 | Status fields are `text` + `CHECK (… IN …)`, not Postgres enums. | TypeORM migrates enum changes by drop/recreate; CHECK constraints change cleanly. |
-| `SnakeNamingStrategy` (`typeorm-naming-strategies`). | `snake_case` in SQL, `camelCase` in TS. |
+| `SnakeNamingStrategy` (our own, `database/snake-naming.strategy.ts`: `typeorm-naming-strategies` does not support TypeORM 1.x). Constraint names follow PostgreSQL's defaults (`users_pkey`, `bookings_mentor_id_fkey`, `users_email_key`); checks, exclusions and partial indexes are named explicitly. | `snake_case` in SQL, `camelCase` in TS; stable names for the drift check. |
 | No eager/lazy relations, no cascades. Joins are explicit in repositories. | Predictable queries, no N+1 surprises. |
 | Repositories are our own classes built from an `EntityManager` (`repo.withManager(em)`); services never touch `DataSource` directly except to open a transaction. | Transaction is always passed explicitly — no hidden ambient state. |
 | Locking/performance-critical queries use QueryBuilder or parameterised raw SQL inside repositories. | Clarity over ORM gymnastics. |
@@ -648,7 +648,8 @@ used by the API for validation and by the web app for parsing); fixture builders
 
 | Command | Purpose |
 |---------|---------|
-| `db:seed [--reset]` | 10 IST mentors (evening/night windows covering US after-school + UK evenings, weekends), demo parent. |
+| `db:migrate` · `db:revert [--yes]` · `db:drift` | Apply pending migrations; undo the last one (asks first); exit 1 if entities and migrations disagree. |
+| `db:seed [--reset] [--yes]` | 10 IST mentors (evening/night windows covering US after-school + UK evenings, weekends), demo parent (Hannah Okafor, Europe/London) with children Leo and Maya. Idempotent; `--reset` empties every table first (asks first). Refused in production. `--scenario e2e` (PD-10: one-slot-left day, full day, empty window, relative to now) arrives with the booking writes (BE-06). |
 | `mentor:list` | Mentors with today's load. |
 | `mentor:add --name --email --tz [--cap]` | Onboard mentor. |
 | `mentor:update <email> [--cap] [--tz] [--active true\|false] [--reassign]` | Update; deactivation with future bookings requires `--reassign`. |
@@ -690,6 +691,7 @@ Actor recorded in `booking_events` as `ops:<os-user>`.
 | `BOOKING_HORIZON_DAYS` | 14 | |
 | `RESCHEDULE_CUTOFF_MIN` | 120 | |
 | `DEFAULT_MAX_TRIALS_PER_DAY` | 2 | |
+| `SEED_DEMO_PASSWORD` | `violet-harbour-lantern` | Demo parent password for `db:seed` |
 | `OUTBOX_POLL_MS` / `OUTBOX_MAX_ATTEMPTS` | 2000 / 8 | |
 | `LOG_LEVEL` | `info` | |
 | `LOG_PRETTY` | `true` in development | Human-readable logs |

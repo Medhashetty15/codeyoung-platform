@@ -24,13 +24,17 @@ Prerequisites: Node 22 (`nvm use`), npm 10, Docker.
 npm install
 npm run infra:up                           # PostgreSQL 17 on :5433, Mailpit on :1025 / :8025
 cp apps/api/.env.example apps/api/.env     # local settings; real env vars always win
+npm run db:migrate                         # create the schema (reviewed migrations)
+npm run db:seed                            # 10 IST mentors + demo parent (safe to re-run)
 npm run dev                                # builds packages, then watches packages + API + worker + web
 curl localhost:3000/api/v1/health/ready    # {"status":"ok",...}
 ```
 
 - API: `http://localhost:3000/api/v1`, OpenAPI UI at `http://localhost:3000/api/docs` (not in production).
 - Mailpit UI: `http://localhost:8025`.
-- Ops CLI (after `npm run build`): `npm run cli -- --help`, e.g. `npm run cli -- config:print`.
+- Demo parent login: `hannah.okafor@example.com` / `violet-harbour-lantern` (children Leo 9 and
+  Maya 12; override the password with `SEED_DEMO_PASSWORD`).
+- Ops CLI: `npm run cli -- --help` (builds, then runs), e.g. `npm run cli -- config:print`.
 
 `docker compose` uses the project name `codeyoung`, so every worktree on a machine shares one
 PostgreSQL and one Mailpit. The init script creates `codeyoung_dev` (backend, API on 3000),
@@ -62,7 +66,11 @@ npm run dev:web                          # http://localhost:5173, /api proxied t
 | `npm test`                        | Unit tests in every workspace                                   |
 | `npm run test:int`                | Integration tests (Testcontainers starts its own PostgreSQL 17) |
 | `npm run infra:up` / `infra:down` | Start / stop local PostgreSQL and Mailpit                       |
-| `npm run cli -- <command>`        | Ops CLI (requires `npm run build`)                              |
+| `npm run db:migrate`              | Apply pending migrations                                        |
+| `npm run db:revert`               | Undo the last migration (asks first; `-- --yes` in scripts)     |
+| `npm run db:drift`                | Exit 1 if entities and migrations disagree                      |
+| `npm run db:seed`                 | Demo data; `-- --reset` empties every table first (asks first)  |
+| `npm run cli -- <command>`        | Build, then run an ops CLI command                              |
 
 CI (`.github/workflows/ci.yml`) runs lint, format, typecheck, unit and integration tests under both
 `TZ=UTC` and `TZ=America/New_York`, and the build.
@@ -72,17 +80,18 @@ CI (`.github/workflows/ci.yml`) runs lint, format, typecheck, unit and integrati
 Validated with zod at boot; the process refuses to start on invalid values. See
 [`apps/api/.env.example`](apps/api/.env.example) for every key with its default.
 
-| Key                     | Default                 | Meaning                                               |
-| ----------------------- | ----------------------- | ----------------------------------------------------- |
-| `NODE_ENV`              | `development`           | `development`, `test` or `production`                 |
-| `PORT`                  | `3000`                  | HTTP port                                             |
-| `DATABASE_URL`          | (required)              | PostgreSQL connection string                          |
-| `WEB_BASE_URL`          | `http://localhost:5173` | Web app origin: email links and default CORS origin   |
-| `CORS_ORIGINS`          | web origin              | Comma-separated CORS allow-list                       |
-| `LOG_LEVEL`             | `info`                  | Pino level (`silent` in tests)                        |
-| `LOG_PRETTY`            | `true` in development   | Human-readable logs instead of JSON                   |
-| `TRUST_PROXY_HOPS`      | `0`                     | Reverse-proxy hops trusted for client IPs             |
-| `RATE_LIMIT_MULTIPLIER` | `1`                     | Scales every rate limit (e2e); must be `<= 1` in prod |
+| Key                     | Default                  | Meaning                                               |
+| ----------------------- | ------------------------ | ----------------------------------------------------- |
+| `NODE_ENV`              | `development`            | `development`, `test` or `production`                 |
+| `PORT`                  | `3000`                   | HTTP port                                             |
+| `DATABASE_URL`          | (required)               | PostgreSQL connection string                          |
+| `WEB_BASE_URL`          | `http://localhost:5173`  | Web app origin: email links and default CORS origin   |
+| `CORS_ORIGINS`          | web origin               | Comma-separated CORS allow-list                       |
+| `LOG_LEVEL`             | `info`                   | Pino level (`silent` in tests)                        |
+| `LOG_PRETTY`            | `true` in development    | Human-readable logs instead of JSON                   |
+| `TRUST_PROXY_HOPS`      | `0`                      | Reverse-proxy hops trusted for client IPs             |
+| `RATE_LIMIT_MULTIPLIER` | `1`                      | Scales every rate limit (e2e); must be `<= 1` in prod |
+| `SEED_DEMO_PASSWORD`    | `violet-harbour-lantern` | Demo parent password for `db:seed` (never production) |
 
 ## Conventions that CI enforces
 
