@@ -19,6 +19,7 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "customConditions": ["@app/source"]
   }
 }
