@@ -165,6 +165,25 @@ describe('/me/students', () => {
     ]);
   });
 
+  it('lists children in the order they were added, then by name', async () => {
+    const parent = await signUp();
+    const parentId = single<{ id: string }>(
+      await db.query(`SELECT id FROM users WHERE email = $1`, [parent.email]),
+    ).id;
+    // Same timestamp for all three, as when the seed adds children in one transaction.
+    await db.query(
+      `INSERT INTO students (parent_id, first_name, age, created_at) VALUES
+         ($1, 'Maya', 12, '2026-10-01T10:00:00Z'),
+         ($1, 'Leo', 9, '2026-10-01T10:00:00Z'),
+         ($1, 'Arjun', 7, '2026-10-02T10:00:00Z')`,
+      [parentId],
+    );
+
+    const list = StudentListSchema.parse((await as(parent).get('/me/students').expect(200)).body);
+
+    expect(list.map((student) => student.firstName)).toEqual(['Leo', 'Maya', 'Arjun']);
+  });
+
   it('refuses a second child with the same name, in any case', async () => {
     const parent = await signUp();
     await as(parent).post('/me/students', { firstName: 'Leo', age: 9 }).expect(201);
