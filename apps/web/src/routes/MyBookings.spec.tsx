@@ -43,13 +43,9 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-/** The row menus load after the page; wait for the real trigger before pressing it. */
+/** The row menu's button; pressing it loads the menu and opens it. */
 async function menuTrigger(name: string) {
-  await screen.findByRole('button', { name });
-  await waitFor(() => {
-    expect(screen.getByRole('button', { name })).toHaveAttribute('aria-expanded');
-  });
-  return screen.getByRole('button', { name });
+  return screen.findByRole('button', { name });
 }
 
 function open(path: string) {

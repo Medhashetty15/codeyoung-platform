@@ -255,14 +255,8 @@ describe('confirmation page', () => {
     const createObjectURL = vi.fn(() => 'blob:ics');
     Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
     open('/bookings/0b6c3d5e-8f4a-4c1b-9d2e-7a6b5c4d3e2f?new=1');
-    await screen.findByRole('button', { name: 'Add to calendar' });
-    // The menu code loads after the page; press the real trigger.
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Add to calendar' })).toHaveAttribute(
-        'aria-expanded',
-      );
-    });
-    await userEvent.click(screen.getByRole('button', { name: 'Add to calendar' }));
+    // The press loads the menu code and opens the menu.
+    await userEvent.click(await screen.findByRole('button', { name: 'Add to calendar' }));
     expect(await screen.findByRole('menuitem', { name: 'Google Calendar' })).toHaveAttribute(
       'href',
       expect.stringContaining('https://calendar.google.com/calendar/render?action=TEMPLATE'),
