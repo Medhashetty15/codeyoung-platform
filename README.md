@@ -58,7 +58,7 @@ PostgreSQL and one Mailpit. The init script creates `codeyoung_dev` (backend, AP
 `codeyoung_fe` (frontend's API instance on 3001), `codeyoung_test` and `codeyoung_app` (the
 Docker `app` profile; `db:create` adds it to an older volume).
 
-## Quick start (web)
+## Develop: web
 
 ```sh
 npm install
@@ -71,6 +71,50 @@ npm run dev:web                          # http://localhost:5173, /api proxied t
 - `npm run icons -w @app/web` regenerates the icon components after adding a name to
   `apps/web/scripts/generate-icons.mjs`; a unit test fails if the committed file is stale.
 - Design rules live in [docs/07](docs/07-design-system.md); screens and architecture in [docs/05](docs/05-frontend-design.md).
+- Without an API: `VITE_API_MOCKS=1 npm run dev:web` serves MSW handlers built from the contract
+  fixtures; add `?mock=signed-in` to any URL to browse as a signed-in parent.
+
+## Testing: web, e2e and a11y
+
+| Command                     | What it covers                                                                                                                                                                                                       |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test -w @app/web`      | Vitest, Testing Library and MSW (handlers from `@app/contracts` fixtures): every screen's states, error mapping, time zone logic, plus a copy lint (no em/en dashes, emojis or filler words) and the CSP hash guard. |
+| `npm run build -w @app/web` | Fails if any route's first load (entry + route chunk + preloads) exceeds 180 KB gzip, or if `apps/web/csp.json` no longer matches the inline script in the built `index.html`.                                       |
+| `npm run e2e -w @app/web`   | Playwright against the real API, worker and Mailpit, in `Europe/London` and `America/Los_Angeles`, then axe on every route in both themes and screenshots at 375 and 1280 px, light and dark.                        |
+
+End-to-end prerequisites (the frontend's API instance, see above):
+
+```sh
+docker compose up -d                  # PostgreSQL and Mailpit (http://localhost:8025)
+# apps/api/.env: PORT=3001, DATABASE_URL=.../codeyoung_fe, COOKIE_SECURE=false, RATE_LIMIT_MULTIPLIER=100
+npm run db:migrate
+npm run dev:api                       # API on 3001
+SMTP_URL=smtp://localhost:1025 OUTBOX_POLL_MS=500 npm run dev:worker   # emails land in Mailpit
+npm run e2e -w @app/web               # starts, or reuses, the web dev server on 5173
+npx playwright show-report apps/web/e2e-report   # results, traces and the attached screenshots
+```
+
+Each zone project first runs `db:seed --scenario e2e --tz <zone>`, which **resets** the database in
+`apps/api/.env`; never point it at data you want to keep. Per zone it books as a new parent and checks
+the parent email (their zone) and the mentor email (IST plus the family's time), races two families
+for the last free mentor, moves and cancels a trial, and resets a password from the Mailpit link. In CI
+the `e2e` job runs the same suite against the built app (`vite preview` on 4173).
+
+## Frontend architecture notes
+
+- **The URL is the state** for the booking flow (`?tz=&date=&slot=`), so refresh, Back and shared
+  links all work; server data lives in TanStack Query, the session in a small zustand store.
+- **Session:** the access token stays in memory, the refresh token in an httpOnly SameSite=Strict
+  cookie. Refresh is single-flight (a Web Lock across tabs), proactive 60 s before expiry and reactive
+  on a 401; login and logout are broadcast to other tabs.
+- **Time:** every date and time goes through `@app/time` (Temporal); ESLint bans `Date` elsewhere. The
+  display zone resolves URL, then the chosen zone, the profile, the saved zone and the device, and is
+  shown next to every time.
+- **First load:** routes are lazy; React Hook Form, zod, Base UI menus and dialogs load after the page.
+  A deferred control shows its real button and mounts the loaded version already open on press, so
+  no click is lost. Response validation with zod runs in development and tests only.
+- **Content Security Policy:** the only inline script sets the theme before first paint; its hash
+  lives in `apps/web/csp.json` (`npm run csp-hash -w @app/web`).
 
 ## Scripts (root)
 
