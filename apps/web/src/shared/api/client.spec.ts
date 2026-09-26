@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { problem, server } from '../../test/msw';
 
 import { ApiError, parseRetryAfter } from './ApiError';
-import { api, configureApiAuth } from './client';
+import { api, apiBlob, configureApiAuth } from './client';
 
 const meSchema = z.object({ id: z.string(), fullName: z.string() });
 
@@ -143,6 +143,21 @@ describe('api', () => {
     await expect(api('/me', { schema: meSchema })).rejects.toMatchObject({
       code: 'INVALID_RESPONSE',
     });
+  });
+});
+
+describe('apiBlob', () => {
+  it('downloads a file with the bearer token, refreshing when needed', async () => {
+    server.use(
+      http.get('/api/v1/bookings/b1/calendar.ics', ({ request }) =>
+        request.headers.get('Authorization') === 'Bearer fresh'
+          ? new HttpResponse('BEGIN:VCALENDAR', { headers: { 'Content-Type': 'text/calendar' } })
+          : problem(401, 'UNAUTHENTICATED'),
+      ),
+    );
+    const blob = await apiBlob('/bookings/b1/calendar.ics');
+    expect(await blob.text()).toBe('BEGIN:VCALENDAR');
+    expect(refresh).toHaveBeenCalledOnce();
   });
 });
 

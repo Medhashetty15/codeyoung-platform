@@ -75,8 +75,8 @@ async function send(
   }
 }
 
-/** JSON request against /api/v1. Non-2xx responses throw ApiError; empty bodies resolve to undefined. */
-export async function api<T = void>(path: string, options: ApiOptions<T> = {}): Promise<T> {
+/** Sends the request with auth, refreshing once on 401 UNAUTHENTICATED; throws ApiError on non-2xx. */
+async function request(path: string, options: ApiOptions<unknown>): Promise<Response> {
   const useAuth = options.auth ?? true;
   let response = await send(path, options, useAuth ? (auth?.getAccessToken() ?? null) : null);
 
@@ -90,6 +90,12 @@ export async function api<T = void>(path: string, options: ApiOptions<T> = {}): 
   }
 
   if (!response.ok) throw await toApiError(response);
+  return response;
+}
+
+/** JSON request against /api/v1. Non-2xx responses throw ApiError; empty bodies resolve to undefined. */
+export async function api<T = void>(path: string, options: ApiOptions<T> = {}): Promise<T> {
+  const response = await request(path, options);
   // 202 (forgot password) and 204 carry no body.
   const text = await response.text();
   if (!text) return undefined as T;
@@ -100,4 +106,13 @@ export async function api<T = void>(path: string, options: ApiOptions<T> = {}): 
   if (parsed.success) return parsed.data;
   onSchemaMismatch(path, parsed.error);
   return json as T;
+}
+
+/** A file from the API (e.g. the .ics invite), fetched with the bearer token like any call. */
+export async function apiBlob(
+  path: string,
+  options: Omit<ApiOptions<Blob>, 'schema'> = {},
+): Promise<Blob> {
+  const response = await request(path, options);
+  return response.blob();
 }
