@@ -25,14 +25,9 @@ export function configureApiAuth(adapter: ApiAuthAdapter | null): void {
 
 type SchemaMismatchHandler = (path: string, error: z.ZodError) => void;
 
-/** Development throws so contract drift is loud; production reports and keeps going (doc 05 §12.1). */
+/** Contract drift is loud where schemas exist: development and tests (doc 05 §12.1). */
 const defaultMismatchHandler: SchemaMismatchHandler = (path, error) => {
-  if (import.meta.env.DEV) {
-    throw new ApiError(0, 'INVALID_RESPONSE', `Unexpected response from ${path}`, error.message);
-  }
-  // Production has no error tracker yet; the console is the report channel.
-  // eslint-disable-next-line no-console
-  console.error(`Unexpected response from ${path}`, error.issues);
+  throw new ApiError(0, 'INVALID_RESPONSE', `Unexpected response from ${path}`, error.message);
 };
 
 let onSchemaMismatch = defaultMismatchHandler;
@@ -44,7 +39,11 @@ export function setSchemaMismatchHandler(handler: SchemaMismatchHandler | null):
 export interface ApiOptions<T> {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
-  schema?: z.ZodType<T>;
+  /**
+   * Response schema, checked in development and tests only (PD-24). Pass it as
+   * `import.meta.env.DEV ? XSchema : undefined` so production builds drop the schema and zod.
+   */
+  schema?: z.ZodType<T> | undefined;
   /** Send the bearer token, and refresh-and-retry once on 401 UNAUTHENTICATED. Default true. */
   auth?: boolean;
   idempotencyKey?: string;
@@ -76,7 +75,7 @@ async function send(
   }
 }
 
-/** JSON request against /api/v1. Non-2xx responses throw ApiError. */
+/** JSON request against /api/v1. Non-2xx responses throw ApiError; empty bodies resolve to undefined. */
 export async function api<T = void>(path: string, options: ApiOptions<T> = {}): Promise<T> {
   const useAuth = options.auth ?? true;
   let response = await send(path, options, useAuth ? (auth?.getAccessToken() ?? null) : null);
@@ -94,9 +93,12 @@ export async function api<T = void>(path: string, options: ApiOptions<T> = {}): 
   }
 
   if (!response.ok) throw await toApiError(response);
-  if (response.status === 204 || !options.schema) return undefined as T;
+  // 202 (forgot password) and 204 carry no body.
+  const text = await response.text();
+  if (!text) return undefined as T;
+  const json: unknown = JSON.parse(text);
+  if (!options.schema) return json as T;
 
-  const json: unknown = await response.json();
   const parsed = options.schema.safeParse(json);
   if (parsed.success) return parsed.data;
   onSchemaMismatch(path, parsed.error);

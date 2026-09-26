@@ -107,6 +107,21 @@ describe('api', () => {
     });
   });
 
+  it('resolves empty 202 and 204 bodies to undefined', async () => {
+    server.use(
+      http.post('/api/v1/auth/password/forgot', () => new HttpResponse(null, { status: 202 })),
+    );
+    await expect(
+      api('/auth/password/forgot', { method: 'POST', body: {}, auth: false }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('passes JSON through untouched when no schema is given (production)', async () => {
+    token = 'fresh';
+    server.use(http.get('/api/v1/me', () => HttpResponse.json({ id: 42 })));
+    await expect(api('/me')).resolves.toEqual({ id: 42 });
+  });
+
   it('reports transport failures as NETWORK_ERROR', async () => {
     token = 'fresh';
     server.use(http.get('/api/v1/me', () => HttpResponse.error()));

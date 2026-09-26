@@ -371,7 +371,9 @@ nothing imports from `routes/` or `app/`. Enforced with ESLint `import/no-restri
 - `api<T>(path, { method, body, schema, auth = true, idempotencyKey, signal })`: base `/api/v1`, JSON,
   Bearer from the store, `X-Requested-With: cy-web` on cookie-authenticated auth calls, refresh-and-retry on 401.
 - Non-2xx becomes `ApiError { status, code, title, detail, errors, retryAfter, traceId, extras }`. UI branches on `code` only.
-- Responses parsed with shared zod schemas (dev: throw on mismatch; prod: report and continue).
+- Responses parsed with shared zod schemas in development and tests (throw on mismatch); production is a
+  typed pass-through so zod stays out of routes without forms (PD-24). Call sites pass
+  `schema: import.meta.env.DEV ? XSchema : undefined`, which production builds remove.
 - Query defaults: GET retries x2 on network/5xx (never 4xx); mutations never auto-retry.
 - Key factory: `qk.slots(from, days, tz)`, `qk.bookings(scope)`, `qk.booking(id)`, `qk.me()`, `qk.students()`, `qk.classroom(token)`, `qk.meta.*`.
 
@@ -397,7 +399,8 @@ nothing imports from `routes/` or `app/`. Enforced with ESLint `import/no-restri
 
 ### 12.4 Performance
 
-- Initial JS <= 180 KB gzip (route-level splitting; classroom, account, auth, reschedule lazy).
+- Initial JS <= 180 KB gzip (route-level splitting; classroom, account, auth, reschedule lazy). `npm run build -w @app/web`
+  fails when the entry plus a route's chunks and modulepreloads exceed it (`scripts/bundle-budget.mjs`).
 - LCP < 2.5s on a mid-range phone, INP < 200ms, CLS < 0.1 (font metric overrides, reserved image boxes,
   skeletons with final dimensions, pending buttons with locked width).
 - Slots prefetched when the landing CTA is hovered or focused; the hero Time Tray query shares the cache with `/book`.

@@ -1,4 +1,4 @@
-import { errorCodeSchema, type ErrorCode, type FieldError } from '@app/contracts';
+import type { ErrorCode, FieldError } from '@app/contracts';
 
 /** Codes the client produces itself, next to the API's documented codes (doc 03 §9). */
 export type ClientErrorCode = 'NETWORK_ERROR' | 'INVALID_RESPONSE' | 'UNKNOWN_ERROR';
@@ -80,7 +80,6 @@ export async function toApiError(response: Response): Promise<ApiError> {
     // Not JSON: keep the empty body and derive everything from the status line.
   }
   const text = (value: unknown) => (typeof value === 'string' ? value : undefined);
-  const code = errorCodeSchema.safeParse(body.code);
   const errors = Array.isArray(body.errors)
     ? body.errors.filter(
         (entry): entry is FieldError =>
@@ -93,7 +92,8 @@ export async function toApiError(response: Response): Promise<ApiError> {
   );
   return new ApiError(
     response.status,
-    code.success ? code.data : fallbackCode(response.status),
+    // Typed pass-through (PD-24): the API only sends documented codes; UI branches on known ones.
+    typeof body.code === 'string' ? (body.code as ErrorCode) : fallbackCode(response.status),
     text(body.title) ?? response.statusText,
     text(body.detail),
     errors,

@@ -6,13 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/bundle-budget.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "icons": "node scripts/generate-icons.mjs",
-    "budget": "node scripts/bundle-budget.mjs"
+    "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
     "@app/contracts": "*",

@@ -5,6 +5,8 @@ import { http, HttpResponse } from 'msw';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { buildMe } from '@app/contracts/testing';
+
 import { useSessionStore } from '../features/auth';
 import { createQueryClient } from '../shared/api/query-client';
 import { server } from '../test/msw';
@@ -57,15 +59,7 @@ describe('app shell', () => {
   it('shows My bookings and the account menu to signed-in parents', async () => {
     useSessionStore.setState({ status: 'authenticated', accessToken: 't' });
     server.use(
-      http.get('/api/v1/me', () =>
-        HttpResponse.json({
-          id: 'u1',
-          email: 'hannah@okafor.co.uk',
-          fullName: 'Hannah Okafor',
-          phone: null,
-          timezone: 'Europe/London',
-        }),
-      ),
+      http.get('/api/v1/me', () => HttpResponse.json(buildMe({ email: 'hannah@okafor.co.uk' }))),
     );
     renderApp('/');
     await screen.findByRole('heading', { level: 1 });
