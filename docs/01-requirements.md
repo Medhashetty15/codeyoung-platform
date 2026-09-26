@@ -178,7 +178,7 @@ by ops on request; see §7), CAPTCHA.
 | E-17 | Reminder due for cancelled/rescheduled booking | Worker re-checks status at send time and skips. |
 | E-18 | Two browser tabs refresh the access token at the same moment | Refresh-token rotation has a short grace window (20 s) so a concurrent refresh with the just-rotated token doesn't trigger reuse detection. Reuse outside the window revokes the session. |
 | E-19 | Stolen refresh token used after the real client rotated it | Reuse detected → whole session revoked → both parties must log in again. |
-| E-20 | Brute-force login | Per-IP and per-email rate limits; account locked for 15 min after 10 failures in 15 min (`429` + `Retry-After`); same response for wrong email and wrong password; dummy hash for unknown emails keeps timing equal. |
+| E-20 | Brute-force login | Per-IP and per-email rate limits; account locked for 15 min after 10 failures in 15 min (`429` + `Retry-After`); same response for wrong email and wrong password; dummy hash for unknown emails keeps timing equal. The lock answer itself shows that the email has an account; accepted, since registration already reveals existence (A-13) and the per-email limit makes probing slow. |
 | E-21 | Forgot password for unknown email | Always `202`, no email sent. |
 | E-22 | Reset link used twice or expired | `400 RESET_TOKEN_INVALID`; tokens single-use, 30 min TTL; new request invalidates older tokens. |
 | E-23 | Parent accesses another parent's booking id | `404 BOOKING_NOT_FOUND` (no existence leak). |
