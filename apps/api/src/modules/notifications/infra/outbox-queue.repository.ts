@@ -2,6 +2,28 @@ import { type EntityManager } from 'typeorm';
 
 import { fromDate, type Temporal, toDate } from '@app/time';
 
+import { type OutboxStatus } from './outbox-message.entity';
+
+export interface OutboxSummary {
+  id: string;
+  type: string;
+  status: OutboxStatus;
+  attempts: number;
+  runAfter: Temporal.Instant;
+  lastError: string | null;
+  createdAt: Temporal.Instant;
+}
+
+interface SummaryRow {
+  id: string;
+  type: string;
+  status: OutboxStatus;
+  attempts: number;
+  run_after: Date;
+  last_error: string | null;
+  created_at: Date;
+}
+
 export interface ClaimedMessage {
   id: string;
   type: string;
@@ -131,5 +153,39 @@ export class OutboxQueueRepository {
       [message.id, toDate(message.lockedAt), ...values],
     );
     return affected === 1;
+  }
+
+  /** Newest first, for the ops CLI (docs/03 §10). */
+  async list(status: OutboxStatus, limit: number): Promise<OutboxSummary[]> {
+    const rows = await this.manager.query<SummaryRow[]>(
+      `SELECT id, type, status, attempts, run_after, last_error, created_at
+         FROM outbox_messages WHERE status = $1 ORDER BY id DESC LIMIT $2`,
+      [status, limit],
+    );
+    return rows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      status: row.status,
+      attempts: row.attempts,
+      runAfter: fromDate(row.run_after),
+      lastError: row.last_error,
+      createdAt: fromDate(row.created_at),
+    }));
+  }
+
+  /**
+   * Gives DEAD messages (all, or the listed ids) a fresh set of attempts, due
+   * now. Only DEAD rows change; the ids of those that did are returned.
+   */
+  async retryDead(ids: readonly string[] | 'all', now: Temporal.Instant): Promise<string[]> {
+    const [rows] = await this.manager.query<[{ id: string }[], number]>(
+      `UPDATE outbox_messages
+          SET status = 'PENDING', attempts = 0, run_after = $1, locked_at = NULL,
+              processed_at = NULL
+        WHERE status = 'DEAD' AND ($2::bigint[] IS NULL OR id = ANY($2::bigint[]))
+        RETURNING id`,
+      [toDate(now), ids === 'all' ? null : ids],
+    );
+    return rows.map((row) => row.id).sort((a, b) => Number(BigInt(a) - BigInt(b)));
   }
 }
