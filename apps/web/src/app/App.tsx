@@ -24,8 +24,7 @@ export function App() {
     const stopPrefetch = prefetchOverlaysWhenIdle();
     const stopSession = initSession({
       queryClient,
-      navigate: (to, options) => void router.navigate(to, options),
-      currentPath: () => `${router.state.location.pathname}${router.state.location.search}`,
+      navigate: (to, options) => router.navigate(to, options),
     });
     return () => {
       stopTheme();

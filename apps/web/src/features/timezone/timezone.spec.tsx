@@ -60,7 +60,7 @@ function desktop(matches: boolean) {
 const SLOT = { start: '2026-10-24T16:00:00Z', end: '2026-10-24T17:00:00Z' };
 
 beforeEach(() => {
-  useSessionStore.setState({ status: 'anonymous', accessToken: null });
+  useSessionStore.setState({ status: 'anonymous', accessToken: null, endedBy: null });
   useZoneStore.setState({ chosen: null, saved: null });
   vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['en-GB']);
 });
@@ -139,7 +139,7 @@ describe.each([
 describe('profile time zone prompt', () => {
   it('asks a signed-in parent whether to save the new zone to the profile', async () => {
     desktop(true);
-    useSessionStore.setState({ status: 'authenticated', accessToken: 't' });
+    useSessionStore.setState({ status: 'authenticated', accessToken: 't', endedBy: null });
     let patched: unknown;
     server.use(
       http.get('/api/v1/me', () => HttpResponse.json(buildMe({ timezone: 'America/New_York' }))),

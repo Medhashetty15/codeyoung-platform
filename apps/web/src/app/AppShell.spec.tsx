@@ -29,7 +29,7 @@ function header() {
 
 describe('app shell', () => {
   beforeEach(() => {
-    useSessionStore.setState({ status: 'anonymous', accessToken: null });
+    useSessionStore.setState({ status: 'anonymous', accessToken: null, endedBy: null });
   });
 
   it('offers log in and the booking CTA to visitors', async () => {
@@ -57,7 +57,7 @@ describe('app shell', () => {
   });
 
   it('shows My bookings and the account menu to signed-in parents', async () => {
-    useSessionStore.setState({ status: 'authenticated', accessToken: 't' });
+    useSessionStore.setState({ status: 'authenticated', accessToken: 't', endedBy: null });
     server.use(
       http.get('/api/v1/me', () => HttpResponse.json(buildMe({ email: 'hannah@okafor.co.uk' }))),
     );

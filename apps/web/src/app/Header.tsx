@@ -43,7 +43,8 @@ export function Header({ scrolled, zoneChip }: { scrolled: boolean; zoneChip?: R
       <div className="relative mx-auto flex h-16 max-w-content items-center gap-3 px-4">
         <Wordmark />
         <div className="ml-auto flex items-center gap-2">
-          {zoneChip}
+          {/* Booking pages show the chip next to the times instead. */}
+          {!isBookingFlow(pathname) && zoneChip}
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
             {status === 'authenticated' && (
               <Link to="/bookings" className={buttonVariants({ variant: 'ghost' })}>

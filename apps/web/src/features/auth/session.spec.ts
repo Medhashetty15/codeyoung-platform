@@ -18,10 +18,10 @@ let stop: () => void;
 let clearCache: MockInstance<QueryClient['clear']>;
 const navigate = vi.fn();
 
-async function boot(path = '/bookings') {
+async function boot() {
   const queryClient = new QueryClient();
   clearCache = vi.spyOn(queryClient, 'clear');
-  stop = initSession({ queryClient, navigate, currentPath: () => path });
+  stop = initSession({ queryClient, navigate });
   await vi.waitFor(() => {
     expect(useSessionStore.getState().status).not.toBe('unknown');
   });
@@ -29,7 +29,7 @@ async function boot(path = '/bookings') {
 
 beforeEach(() => {
   navigate.mockReset();
-  useSessionStore.setState({ status: 'unknown', accessToken: null });
+  useSessionStore.setState({ status: 'unknown', accessToken: null, endedBy: null });
 });
 afterEach(() => {
   stop();
@@ -107,24 +107,21 @@ describe('session lifecycle', () => {
     server.use(http.post('/api/v1/auth/logout', logoutCall));
     await logout();
     expect(logoutCall).toHaveBeenCalledOnce();
-    expect(useSessionStore.getState().status).toBe('anonymous');
+    expect(useSessionStore.getState()).toMatchObject({ status: 'anonymous', endedBy: 'logout' });
     expect(clearCache).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith('/', { replace: true });
   });
 
-  it('sends the parent to log in, with a way back, when the session dies mid-visit', async () => {
+  it('marks the session as expired when the refresh token dies mid-visit', async () => {
     server.use(refreshOk());
-    await boot('/bookings?scope=past');
+    await boot();
     server.use(
       http.get('/api/v1/me', () => problem(401, 'UNAUTHENTICATED')),
       http.post('/api/v1/auth/refresh', () => problem(401, 'REFRESH_TOKEN_REUSED')),
     );
     await expect(api('/me')).rejects.toMatchObject({ code: 'UNAUTHENTICATED' });
-    expect(useSessionStore.getState().status).toBe('anonymous');
-    expect(navigate).toHaveBeenCalledWith('/login?returnTo=%2Fbookings%3Fscope%3Dpast', {
-      replace: true,
-      state: { notice: 'session-expired' },
-    });
+    expect(useSessionStore.getState()).toMatchObject({ status: 'anonymous', endedBy: 'expired' });
+    expect(clearCache).toHaveBeenCalled();
   });
 
   it('follows a logout from another tab', async () => {

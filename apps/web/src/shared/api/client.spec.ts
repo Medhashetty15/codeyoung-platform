@@ -11,7 +11,6 @@ const meSchema = z.object({ id: z.string(), fullName: z.string() });
 
 let token: string | null;
 const refresh = vi.fn<() => Promise<string | null>>();
-const onSessionExpired = vi.fn();
 
 beforeEach(() => {
   token = 'expired';
@@ -19,8 +18,7 @@ beforeEach(() => {
     token = 'fresh';
     return Promise.resolve(token);
   });
-  onSessionExpired.mockReset();
-  configureApiAuth({ getAccessToken: () => token, refresh, onSessionExpired });
+  configureApiAuth({ getAccessToken: () => token, refresh });
 });
 
 /** Accepts only the token "fresh". */
@@ -41,11 +39,11 @@ describe('api', () => {
     expect(refresh).toHaveBeenCalledOnce();
   });
 
-  it('ends the session and rethrows when the refresh is refused', async () => {
+  it('rethrows the 401 when the refresh is refused', async () => {
     refresh.mockResolvedValue(null);
     server.use(protectedMe());
     await expect(api('/me')).rejects.toMatchObject({ status: 401, code: 'UNAUTHENTICATED' });
-    expect(onSessionExpired).toHaveBeenCalledOnce();
+    expect(refresh).toHaveBeenCalledOnce();
   });
 
   it('does not refresh for public calls or other 401 codes', async () => {

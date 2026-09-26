@@ -34,6 +34,7 @@ export function Button({
     <button
       type={type}
       aria-disabled={pending || undefined}
+      aria-busy={pending || undefined}
       data-pending={pending || undefined}
       onClick={(event) => {
         if (pending) {

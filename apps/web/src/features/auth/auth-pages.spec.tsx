@@ -3,7 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildAuthResponse, buildMe, buildProblem } from '@app/contracts/testing';
+import {
+  buildAuthResponse,
+  buildMe,
+  buildProblem,
+  buildRefreshResponse,
+} from '@app/contracts/testing';
 
 import { server } from '../../test/msw';
 import { renderApp } from '../../test/render-app';
@@ -17,7 +22,7 @@ const problem = (code: Parameters<typeof buildProblem>[0], extras?: Record<strin
 
 let stop: () => void = () => {};
 beforeEach(() => {
-  useSessionStore.setState({ status: 'unknown', accessToken: null });
+  useSessionStore.setState({ status: 'unknown', accessToken: null, endedBy: null });
   vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['en-GB']);
 });
 afterEach(() => {
@@ -252,5 +257,24 @@ describe('reset password', () => {
       'href',
       '/forgot-password',
     );
+  });
+});
+
+describe('log out', () => {
+  it('goes home from a protected page instead of bouncing to the login page', async () => {
+    server.use(
+      http.post('/api/v1/auth/refresh', () => HttpResponse.json(buildRefreshResponse())),
+      http.get('/api/v1/me', () => HttpResponse.json(buildMe())),
+    );
+    const app = renderApp('/bookings', { session: true });
+    stop = app.stop;
+    await screen.findByRole('heading', { level: 1, name: 'My bookings' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Account menu' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Log out' }));
+    await waitFor(() => {
+      expect(app.router.state.location.pathname).toBe('/');
+    });
+    expect(app.router.state.location.search).toBe('');
+    expect(useSessionStore.getState().status).toBe('anonymous');
   });
 });

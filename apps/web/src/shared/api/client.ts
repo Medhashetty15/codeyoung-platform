@@ -9,12 +9,12 @@ export const REQUESTED_WITH = { 'X-Requested-With': 'cy-web' } as const;
 
 /**
  * The auth feature plugs in here at boot, so `shared/` never imports a feature.
- * `refresh` must be single-flight and resolve to the new access token, or null when the session is gone.
+ * `refresh` must be single-flight and resolve to the new access token, or null when the session is
+ * gone (the auth feature then ends the session itself).
  */
 export interface ApiAuthAdapter {
   getAccessToken: () => string | null;
   refresh: () => Promise<string | null>;
-  onSessionExpired: () => void;
 }
 
 let auth: ApiAuthAdapter | null = null;
@@ -84,10 +84,7 @@ export async function api<T = void>(path: string, options: ApiOptions<T> = {}): 
     const error = await toApiError(response.clone());
     if (error.code === 'UNAUTHENTICATED') {
       const token = await auth.refresh();
-      if (!token) {
-        auth.onSessionExpired();
-        throw error;
-      }
+      if (!token) throw error;
       response = await send(path, options, token);
     }
   }
