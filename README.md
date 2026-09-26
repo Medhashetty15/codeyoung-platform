@@ -42,6 +42,9 @@ curl localhost:3000/api/v1/health/ready    # {"status":"ok",...}
   `npm run cli -- booking:reassign CY-XXXXXX`, or when nobody is free
   `npm run cli -- booking:cancel CY-XXXXXX --reason "Mentor ill"`; everyone is emailed. Failed
   emails: `outbox:list`, `outbox:retry <id>`. Waitlist: `waitlist:list`, `waitlist:mark <id> CONTACTED`.
+  A whole sick day: `mentor:time-off:add <email> --from 2026-10-24T00:00+05:30 --to 2026-10-25T00:00+05:30 --reassign`.
+  Onboarding: `mentor:add`, then `mentor:availability:set <email> --file availability.json`.
+  Deletion request: `user:anonymise <email>`.
 
 `docker compose` uses the project name `codeyoung`, so every worktree on a machine shares one
 PostgreSQL and one Mailpit. The init script creates `codeyoung_dev` (backend, API on 3000),

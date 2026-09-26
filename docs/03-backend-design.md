@@ -725,6 +725,25 @@ Behaviour of the booking and outbox commands:
   parent asks for a new link.
 - `waitlist:list` shows `OPEN` entries by default (`--status all` for every entry).
 
+Mentor schedule changes (`mentor:update`, `mentor:time-off:add`, `mentor:availability:set`) reduce
+capacity, so each takes the mentor's lock like a booking (§3.4). Inside that transaction the change
+is applied, then every upcoming confirmed class the new schedule no longer holds (availability,
+time off, buffer; deactivation strands them all; a lower cap only limits future bookings) is
+listed. Without `--reassign` the change is refused and nothing is written; with it, each class moves
+to the least-loaded free mentor (as `booking:reassign`) in the same transaction, all or nothing:
+one class without cover rolls everything back and names it so ops can cancel it first. The preview
+is the same change run and rolled back. `mentor:availability:set` reads
+`[{"weekday": "Mon" | 1, "start": "19:00", "end": "23:00"}]` (mentor wall times; an end before the
+start crosses midnight), ends the current rules the day before `--from` and previews each window's
+first date in the mentor zone, New York and London. It has no `--reassign`: move or cancel stranded
+classes first.
+
+`user:anonymise` refuses while the account has confirmed classes ahead (cancel them first so both
+sides are emailed before the address goes). It then replaces name, email
+(`deleted-<id>@deleted.invalid`), phone and password, renames the children "Child 1", "Child 2",
+deletes sessions, reset tokens and waitlist entries, rewrites delivery records to the placeholder
+address and drops unsent account emails. Booking rows stay for mentor history.
+
 ## 11. Configuration (validated with zod at boot)
 
 | Key | Default | Meaning |

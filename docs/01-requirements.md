@@ -183,4 +183,4 @@ by ops on request; see §7), CAPTCHA.
 | E-22 | Reset link used twice or expired | `400 RESET_TOKEN_INVALID`; tokens single-use, 30 min TTL; new request invalidates older tokens. |
 | E-23 | Parent accesses another parent's booking id | `404 BOOKING_NOT_FOUND` (no existence leak). |
 | E-24 | Password change / reset while other sessions are active | Other sessions' refresh tokens revoked at once; their already-issued access tokens (stateless) expire within ≤ 15 min. |
-| E-25 | Mentor becomes unavailable on the day (sick) | Ops `bookings:reassign <ref>`; if no mentor free, CLI reports it and ops cancels with a reason → parent emailed with apology + rebook link. |
+| E-25 | Mentor becomes unavailable on the day (sick) | Ops `booking:reassign <ref>` (or `mentor:time-off:add <email> --from --to --reassign` for the whole day); if no mentor free, CLI reports it and ops cancels with a reason → parent emailed with apology + rebook link. |
