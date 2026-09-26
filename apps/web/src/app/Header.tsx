@@ -6,12 +6,13 @@ import { cn } from '../shared/lib/cn';
 import { buttonVariants } from '../shared/ui/button-variants';
 
 import { MobileNav } from './MobileNav';
-import { isBookingFlow } from './nav';
+import { isAuthPage, isBookingFlow } from './nav';
+import { loadAccountMenu } from './prefetch';
 import { Wordmark } from './Wordmark';
 
 // Only signed-in parents see the account menu; its Menu primitives load with it.
 const AccountMenu = lazy(() =>
-  import('./AccountMenu').then((module) => ({ default: module.AccountMenu })),
+  loadAccountMenu().then((module) => ({ default: module.AccountMenu })),
 );
 
 /**
@@ -49,7 +50,7 @@ export function Header({ scrolled, zoneChip }: { scrolled: boolean; zoneChip?: R
                 My bookings
               </Link>
             )}
-            {status === 'anonymous' && (
+            {status === 'anonymous' && !isAuthPage(pathname) && (
               <Link to="/login" className={buttonVariants({ variant: 'ghost' })}>
                 Log in
               </Link>

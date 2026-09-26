@@ -3,9 +3,10 @@ import { lazy, Suspense, useState } from 'react';
 import { IconButton } from '../shared/ui/IconButton';
 import { ListIcon } from '../shared/ui/icons';
 
-const loadSheet = () => import('./MobileNavSheet');
+import { loadMobileNavSheet } from './prefetch';
+
 const MobileNavSheet = lazy(() =>
-  loadSheet().then((module) => ({ default: module.MobileNavSheet })),
+  loadMobileNavSheet().then((module) => ({ default: module.MobileNavSheet })),
 );
 
 /** Phones: a menu button opening a bottom sheet with the header's items (doc 05 §3). */
@@ -18,8 +19,10 @@ export function MobileNav() {
       <IconButton
         icon={ListIcon}
         label="Menu"
-        // Start fetching the sheet as the finger lands so it is ready by the time the tap ends.
-        onPointerDown={() => void loadSheet()}
+        // Usually prefetched at idle already; hover, focus and touch start cover a fast first tap.
+        onPointerEnter={() => void loadMobileNavSheet()}
+        onFocus={() => void loadMobileNavSheet()}
+        onPointerDown={() => void loadMobileNavSheet()}
         onClick={() => {
           setMounted(true);
           setOpen(true);

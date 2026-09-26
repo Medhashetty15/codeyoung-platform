@@ -30,6 +30,7 @@ export function ThemeSwitch({ className }: { className?: string }) {
             type="radio"
             name={groupId}
             value={value}
+            aria-label={label}
             checked={preference === value}
             onChange={() => {
               setPreference(value);

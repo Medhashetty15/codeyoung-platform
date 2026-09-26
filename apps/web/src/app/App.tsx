@@ -6,6 +6,7 @@ import { initSession } from '../features/auth';
 import { createQueryClient } from '../shared/api/query-client';
 import { watchSystemTheme } from '../shared/theme/theme';
 
+import { prefetchOverlaysWhenIdle } from './prefetch';
 import { createRouter } from './router';
 
 // Toasts are never needed for the first paint; Sonner loads in its own chunk.
@@ -20,6 +21,7 @@ export function App() {
 
   useEffect(() => {
     const stopTheme = watchSystemTheme();
+    const stopPrefetch = prefetchOverlaysWhenIdle();
     const stopSession = initSession({
       queryClient,
       navigate: (to, options) => void router.navigate(to, options),
@@ -27,6 +29,7 @@ export function App() {
     });
     return () => {
       stopTheme();
+      stopPrefetch();
       stopSession();
     };
   }, [queryClient, router]);
