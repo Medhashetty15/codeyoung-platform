@@ -65,7 +65,7 @@ Docker `app` profile; `db:create` adds it to an older volume).
 
 ```sh
 npm install
-cp apps/web/.env.example apps/web/.env   # optional: VITE_API_PROXY_TARGET (default http://localhost:3001)
+cp apps/web/.env.example apps/web/.env   # optional: VITE_API_PROXY_TARGET (default http://localhost:3001), VITE_SUPPORT_EMAIL
 npm run dev:web                          # http://localhost:5173, /api proxied to the API
 ```
 
@@ -76,14 +76,16 @@ npm run dev:web                          # http://localhost:5173, /api proxied t
 - Design rules live in [docs/07](docs/07-design-system.md); screens and architecture in [docs/05](docs/05-frontend-design.md).
 - Without an API: `VITE_API_MOCKS=1 npm run dev:web` serves MSW handlers built from the contract
   fixtures; add `?mock=signed-in` to any URL to browse as a signed-in parent.
+- The production build: `npm run build -w @app/web`, then `npm run preview -w @app/web`
+  (http://localhost:4173, same `/api` proxy).
 
 ## Testing: web, e2e and a11y
 
-| Command                     | What it covers                                                                                                                                                                                                       |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm test -w @app/web`      | Vitest, Testing Library and MSW (handlers from `@app/contracts` fixtures): every screen's states, error mapping, time zone logic, plus a copy lint (no em/en dashes, emojis or filler words) and the CSP hash guard. |
-| `npm run build -w @app/web` | Fails if any route's first load (entry + route chunk + preloads) exceeds 180 KB gzip, or if `apps/web/csp.json` no longer matches the inline script in the built `index.html`.                                       |
-| `npm run e2e -w @app/web`   | Playwright against the real API, worker and Mailpit, in `Europe/London` and `America/Los_Angeles`, then axe on every route in both themes and screenshots at 375 and 1280 px, light and dark.                        |
+| Command                     | What it covers                                                                                                                                                                                                   |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm test -w @app/web`      | Vitest, Testing Library and MSW (handlers from `@app/contracts` fixtures): every screen's states, error mapping, time zone logic, plus a copy lint (no em/en dashes, emojis or filler words) and the CSP guards. |
+| `npm run build -w @app/web` | Fails if any route's first load (entry + route chunk + preloads) exceeds 180 KB gzip, or if `apps/web/csp.json` no longer matches the inline script in the built `index.html`.                                   |
+| `npm run e2e -w @app/web`   | Playwright against the real API, worker and Mailpit, in `Europe/London` and `America/Los_Angeles`, then axe on every route in both themes and screenshots at 375 and 1280 px, light and dark.                    |
 
 End-to-end prerequisites (the frontend's API instance, see above):
 
@@ -102,7 +104,9 @@ Each zone project first runs the built CLI (`node apps/api/dist/cli.js db:seed -
 `apps/api/.env`; never point it at data you want to keep. Per zone it books as a new parent and checks
 the parent email (their zone) and the mentor email (IST plus the family's time), races two families
 for the last free mentor, moves and cancels a trial, and resets a password from the Mailpit link. In CI
-the `e2e` job runs the same suite against the built app (`vite preview` on 4173).
+the `e2e` job runs the same suite against the built app (`vite preview` on 4173). `E2E_WEB`, `E2E_API`
+and `E2E_MAILPIT` point it elsewhere. The Docker `app` profile is not an e2e target: it runs in
+production mode, where the rate limits stay strict and would stop the suite's repeated sign-ups.
 
 ## Frontend architecture notes
 
@@ -117,8 +121,12 @@ the `e2e` job runs the same suite against the built app (`vite preview` on 4173)
 - **First load:** routes are lazy; React Hook Form, zod, Base UI menus and dialogs load after the page.
   A deferred control shows its real button and mounts the loaded version already open on press, so
   no click is lost. Response validation with zod runs in development and tests only.
-- **Content Security Policy:** the only inline script sets the theme before first paint; its hash
-  lives in `apps/web/csp.json` (`npm run csp-hash -w @app/web`).
+- **Content Security Policy:** Caddy sends a strict policy (`infra/web/Caddyfile`): no
+  `'unsafe-inline'` scripts and no `'unsafe-eval'`. The only inline script sets the theme before first
+  paint; its hash lives in `apps/web/csp.json` (`npm run csp-hash -w @app/web`), which a unit test keeps
+  equal to `index.html`, the build to `dist/index.html`, and `apps/web/scripts/csp.spec.ts` to the
+  Caddyfile, along with the hashes of the styles Sonner and NumberFlow inject; upgrading either library
+  may need a Caddyfile update. zod runs `jitless` (`src/zod-config.ts`) so it never probes `eval`.
 
 ## Scripts (root)
 
