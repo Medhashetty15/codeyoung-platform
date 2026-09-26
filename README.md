@@ -56,21 +56,22 @@ npm run dev:web                          # http://localhost:5173, /api proxied t
 
 ## Scripts (root)
 
-| Script                            | What it does                                                    |
-| --------------------------------- | --------------------------------------------------------------- |
-| `npm run dev`                     | Build packages, then watch packages, API, worker and web        |
-| `npm run build`                   | Build every workspace (packages first)                          |
-| `npm run lint` / `lint:fix`       | ESLint, zero warnings allowed                                   |
-| `npm run format` / `format:check` | Prettier                                                        |
-| `npm run typecheck`               | `tsc` for every workspace                                       |
-| `npm test`                        | Unit tests in every workspace                                   |
-| `npm run test:int`                | Integration tests (Testcontainers starts its own PostgreSQL 17) |
-| `npm run infra:up` / `infra:down` | Start / stop local PostgreSQL and Mailpit                       |
-| `npm run db:migrate`              | Apply pending migrations                                        |
-| `npm run db:revert`               | Undo the last migration (asks first; `-- --yes` in scripts)     |
-| `npm run db:drift`                | Exit 1 if entities and migrations disagree                      |
-| `npm run db:seed`                 | Demo data; `-- --reset` empties every table first (asks first)  |
-| `npm run cli -- <command>`        | Build, then run an ops CLI command                              |
+| Script                                                       | What it does                                                                        |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `npm run dev`                                                | Build packages, then watch packages, API, worker and web                            |
+| `npm run build`                                              | Build every workspace (packages first)                                              |
+| `npm run lint` / `lint:fix`                                  | ESLint, zero warnings allowed                                                       |
+| `npm run format` / `format:check`                            | Prettier                                                                            |
+| `npm run typecheck`                                          | `tsc` for every workspace                                                           |
+| `npm test`                                                   | Unit tests in every workspace                                                       |
+| `npm run test:int`                                           | Integration tests (Testcontainers starts its own PostgreSQL 17)                     |
+| `npm run infra:up` / `infra:down`                            | Start / stop local PostgreSQL and Mailpit                                           |
+| `npm run db:migrate`                                         | Apply pending migrations                                                            |
+| `npm run db:revert`                                          | Undo the last migration (asks first; `-- --yes` in scripts)                         |
+| `npm run db:drift`                                           | Exit 1 if entities and migrations disagree                                          |
+| `npm run db:seed`                                            | Demo data; `-- --reset` empties every table first (asks first)                      |
+| `npm run db:seed -- --scenario e2e --tz Europe/London --yes` | End-to-end data relative to now (one-slot-left and fully booked days), JSON summary |
+| `npm run cli -- <command>`                                   | Build, then run an ops CLI command                                                  |
 
 CI (`.github/workflows/ci.yml`) runs lint, format, typecheck, unit and integration tests under both
 `TZ=UTC` and `TZ=America/New_York`, and the build.

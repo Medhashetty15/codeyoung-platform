@@ -564,11 +564,11 @@ used by the API for validation and by the web app for parsing); fixture builders
 | Method | Path | Body → Response |
 |--------|------|-----------------|
 | POST | `/bookings` | Header `Idempotency-Key` (UUID). `{slotStart, timezone, student: {id} \| {firstName, age}}` → `201 Booking` (replay → `200`) |
-| GET | `/bookings?scope=upcoming\|past&cursor=&limit=` | → `{items: BookingSummary[], nextCursor}` |
+| GET | `/bookings?scope=upcoming\|past&cursor=&limit=` | → `{items: BookingSummary[], nextCursor}`. Upcoming = confirmed and not yet ended, soonest first; past = everything else (ended, cancelled, rescheduled, completed), latest first. Keyset paging on `(starts_at, id)`; `limit` default 20, max 50; a tampered cursor is `400 VALIDATION_FAILED`. |
 | GET | `/bookings/:id` | → Booking |
 | POST | `/bookings/:id/cancel` | `{reason?: SCHEDULE_CHANGED \| CHILD_UNAVAILABLE \| BOOKED_BY_MISTAKE \| OTHER}` → Booking (PD-14; ops cancellations keep free text) |
 | POST | `/bookings/:id/reschedule` | Header `Idempotency-Key`. `{slotStart, timezone}` → `201 Booking` (new) |
-| GET | `/bookings/:id/calendar.ics` | → `text/calendar` |
+| GET | `/bookings/:id/calendar.ics` | → `text/calendar` attachment, `METHOD:PUBLISH`, same `UID`/`SEQUENCE` as the emailed invites; confirmed bookings only (else `409 BOOKING_NOT_MODIFIABLE`). |
 
 ### Classroom, waitlist, health — public
 
@@ -662,7 +662,8 @@ used by the API for validation and by the web app for parsing); fixture builders
 | Command | Purpose |
 |---------|---------|
 | `db:migrate` · `db:revert [--yes]` · `db:drift` | Apply pending migrations; undo the last one (asks first); exit 1 if entities and migrations disagree. |
-| `db:seed [--reset] [--yes]` | 10 IST mentors (evening/night windows covering US after-school + UK evenings, weekends), demo parent (Hannah Okafor, Europe/London) with children Leo and Maya. Idempotent; `--reset` empties every table first (asks first). Refused in production. `--scenario e2e` (PD-10: one-slot-left day, full day, empty window, relative to now) arrives with the booking writes (BE-06). |
+| `db:seed --scenario e2e [--tz ZONE] [--empty] [--yes]` | Resets, seeds, then prepares dates relative to now in `ZONE` (default Europe/London) for end-to-end tests (PD-10): today + 2 has exactly one bookable slot (time off around it), today + 3 is fully booked (filler bookings, no emails); `--empty` deactivates every mentor instead (waitlist). Prints a JSON summary with the dates, the remaining slot and the demo login. |
+| `db:seed [--reset] [--yes]` | 10 IST mentors (evening/night windows covering US after-school + UK evenings, weekends), demo parent (Hannah Okafor, Europe/London) with children Leo and Maya. Idempotent; `--reset` empties every table first (asks first). Refused in production. |
 | `mentor:list` | Mentors with today's load. |
 | `mentor:add --name --email --tz [--cap]` | Onboard mentor. |
 | `mentor:update <email> [--cap] [--tz] [--active true\|false] [--reassign]` | Update; deactivation with future bookings requires `--reassign`. |
