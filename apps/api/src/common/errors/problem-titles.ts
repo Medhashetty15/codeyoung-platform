@@ -1,0 +1,30 @@
+import { type ErrorCode } from '@app/contracts';
+
+/** Stable, human-readable `title` per code. Clients branch on `code`, never on this text. */
+export const PROBLEM_TITLES: Record<ErrorCode, string> = {
+  VALIDATION_FAILED: 'The request is not valid',
+  INVALID_TIMEZONE: 'Unknown time zone',
+  SLOT_NOT_ON_GRID: 'The start time is not a bookable slot',
+  WEAK_PASSWORD: 'The password does not meet the policy',
+  RESET_TOKEN_INVALID: 'The reset link is invalid or has expired',
+  UNAUTHENTICATED: 'Authentication is required',
+  INVALID_CREDENTIALS: 'Email or password is incorrect',
+  REFRESH_TOKEN_INVALID: 'The session has expired',
+  REFRESH_TOKEN_REUSED: 'The session was revoked',
+  NOT_FOUND: 'Resource not found',
+  BOOKING_NOT_FOUND: 'Booking not found',
+  STUDENT_NOT_FOUND: 'Student not found',
+  CLASSROOM_NOT_FOUND: 'Class link not found',
+  EMAIL_ALREADY_REGISTERED: 'An account with this email already exists',
+  NO_MENTOR_AVAILABLE: 'No mentor is available for this time',
+  STUDENT_ALREADY_HAS_TRIAL: 'This student already has an upcoming trial',
+  BOOKING_NOT_MODIFIABLE: 'This booking can no longer be changed',
+  STUDENT_NAME_TAKEN: 'A student with this name already exists',
+  IDEMPOTENCY_KEY_REUSED: 'The idempotency key was used for a different request',
+  SLOT_IN_PAST: 'The time is too soon to book',
+  SLOT_OUTSIDE_HORIZON: 'The time is too far ahead to book',
+  RATE_LIMITED: 'Too many requests',
+  ACCOUNT_TEMPORARILY_LOCKED: 'The account is temporarily locked',
+  TEMPORARILY_UNAVAILABLE: 'The service is temporarily unavailable',
+  INTERNAL_ERROR: 'Something went wrong',
+};

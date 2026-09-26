@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-*/
+*.tsbuildinfo
+.tsbuild/
+
+# Test output
+coverage/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Local git worktrees (team workflow)
+.worktrees/
+
+# Logs and OS files
+*.log
+npm-debug.log*
+.DS_Store
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json

@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+    "strictPropertyInitialization": false,
+    "declaration": false,
+    "declarationMap": false,
+    "types": ["node"]
+  },
+  "references": [
+    { "path": "../../packages/contracts/tsconfig.build.json" },
+    { "path": "../../packages/time/tsconfig.build.json" }
+  ],
+  "include": ["src", "test", "vitest.config.mts"]
+}

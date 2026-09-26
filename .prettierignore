@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+.worktrees
+package-lock.json
+*.tsbuildinfo
+docs
