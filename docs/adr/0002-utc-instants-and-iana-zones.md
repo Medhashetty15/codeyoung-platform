@@ -1,6 +1,6 @@
 # 0002 - Store UTC instants and IANA zones, never offsets
 
-- **Status:** Accepted
+- **Status:** Accepted, item 2 amended by [0017](0017-canonicalise-iana-zone-ids-at-boundaries.md)
 - **Date:** 2026-09-26
 - **Deciders:** Author
 - **Related:** [04 - Time zones & DST](../04-timezones-and-dst.md), ADR 0003

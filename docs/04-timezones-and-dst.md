@@ -6,7 +6,10 @@ This is the part of the brief most likely to cause subtle bugs, so the rules are
 
 1. **Store instants, not wall-clock times.** Every class time is a `timestamptz` (UTC instant).
 2. **Store zones as IANA names**, never as offsets or abbreviations. `+05:30` or `EST` cannot tell
-   you what happens next March; `America/New_York` can.
+   you what happens next March; `America/New_York` can. Ids are **canonicalised to the current IANA
+   name at every boundary** (ADR 0017): ICU still reports some renamed zones by their legacy id, so a
+   browser in India sends `Asia/Calcutta`, which is stored and returned as `Asia/Kolkata`. Validation
+   accepts any zone Intl accepts; it never uses `Intl.supportedValuesOf().includes()`.
 3. **Wall-clock time is only stored where it is the user's intent**: mentor weekly availability
    (`19:00–23:00` every Monday *in Asia/Kolkata*). It is converted to instants per concrete date,
    never with a cached offset.
@@ -84,9 +87,12 @@ The UI groups it under Saturday for the parent; the cap counts it on Sunday for 
 
 ## 5. Communicating time to humans
 
-- Always show zone context next to times: **"5:00 PM BST (UTC+1) · London time"**.
-  Abbreviations alone are ambiguous (IST = India/Israel/Irish), so we pair them with the offset
-  and a city name.
+- Always show zone context next to times, with the **same wording in the UI and in emails** (PD-06),
+  from `zoneLabel` in `@app/time`: **"5:00 PM London time (GMT+1)"**, **"9:30 PM Kolkata time (GMT+5:30)"**;
+  US zones use the region people say: **"4:00 PM Eastern Time (GMT-4)"**. No bare abbreviations
+  (IST = India/Israel/Irish) and no dashes: ranges read **"5:00 to 6:00 PM"**.
+- Email example (parent): **"Saturday, 24 October 2026, 5:00 to 6:00 PM London time (GMT+1)"**;
+  the mentor gets the same class as **"Saturday, 24 October 2026, 9:30 to 10:30 PM Kolkata time (GMT+5:30)"**.
 - The picker header says **"Times shown in London time (GMT+1) · Change"**.
 - If a DST transition falls inside the visible date range, show a notice:
   *"Clocks in London go back 1 hour on Sun 25 Oct. Times after that are already adjusted."*
@@ -95,19 +101,50 @@ The UI groups it under Saturday for the parent; the cap counts it on Sunday for 
   a "view in your time zone" link to the manage page.
 - Mentor emails also state the parent's zone ("Parent is in Europe/London") for context.
 
-## 6. `packages/time` API (sketch)
+## 6. `packages/time` API
+
+All functions accept a `Temporal.Instant` or an ISO 8601 string with an offset wherever an instant is
+expected. `Temporal` is re-exported from `temporal-polyfill` without patching globals.
 
 ```ts
-export type IanaZone = string & { __brand: 'IanaZone' };
+type IanaZone = string & { __brand: 'IanaZone' };   // canonical id (ADR 0017)
+type LocalDate = string;                             // 'YYYY-MM-DD'
 
-isValidZone(zone: string): zone is IanaZone
-toInstant(iso: string): Temporal.Instant
-localDateOf(instant, zone): Temporal.PlainDate
-wallWindowToInstants(date: PlainDate, start: PlainTime, end: PlainTime, zone): [Instant, Instant] | null
-                                                  // applies gap/overlap policy, handles end < start
-startOfLocalDay(date, zone): Instant                // not always 00:00 (some zones skip midnight)
-dstTransitionsBetween(from: Instant, to: Instant, zone): Transition[]
-formatForHumans(instant, zone, locale): { date, time, abbr, offset, city }
+// zones
+isValidZone(id): boolean                  // Intl accepts it as a named zone (any case, legacy ids ok)
+canonicalZone(id): IanaZone               // 'asia/calcutta' -> 'Asia/Kolkata'; throws RangeError if unknown
+sameZone(a, b): boolean
+deviceZone(): IanaZone                    // canonical, UTC fallback
+zoneOffset(zone, at): string              // '+05:30'
+
+// labels (UI and emails, PD-06)
+zoneLabel(zone, at): string               // 'London time (GMT+1)', 'Eastern Time (GMT-4)', 'UTC'
+zoneParts(zone, at): { name, city, offset }
+
+// formatting: built from formatToParts, U+00A0 before AM/PM, never dashes
+formatTime(at, zone, locale?)             // '5:00 PM' (en-US) | '17:00' (en-GB)
+formatDate(at, zone, style, locale?)      // long | longWithYear | short | weekday | dayNumber | monthShort
+formatLocalDate(date, style, locale?)
+formatDateTime(at, zone, locale?)
+formatTimeRange(start, end, zone, locale?) // '5:00 to 6:00 PM', '17:00 to 18:00'
+formatForHumans(start, end, zone)         // email wording: { date, time, zone, text }
+
+// calendar
+localDateOf(at, zone): LocalDate          // which day a slot belongs to, per viewer
+todayIn(zone, now), addDays, daysBetween, localDates, isoWeekday, localHour, localTimeOf
+startOfLocalDay(date, zone): Instant      // not always 00:00 (America/Santiago skips midnight)
+
+// wall-clock windows (slot engine), gap/overlap policy of §3
+wallTimeToInstant(date, time, zone, 'start' | 'end'): Instant
+wallWindowToInstants(date, start, end, zone): { start, end } | null   // end <= start crosses midnight
+
+// DST
+dstTransitionsBetween(from, to, zone): { at, offsetBefore, offsetAfter }[]
+describeTransition(transition, zone): { direction: 'forward' | 'back', minutes, localDate }
+
+// instants
+toInstant, isoInstant ('2026-10-24T16:00:00Z'), addMinutes, compareInstants, isBefore, isAfter,
+minutesBetween, durationParts (countdown), epochMs, toDate / fromDate (library edges only)
 ```
 
 ## 7. Test fixtures (must pass)

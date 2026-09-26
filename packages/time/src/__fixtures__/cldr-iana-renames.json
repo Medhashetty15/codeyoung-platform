@@ -1,0 +1,112 @@
+{
+  "source": "https://github.com/unicode-org/cldr/blob/main/common/bcp47/timezone.xml",
+  "license": "Unicode License v3 (https://www.unicode.org/license.txt)",
+  "retrieved": "2026-09-26",
+  "note": "Every CLDR zone whose current IANA name differs from its legacy CLDR/ICU id. Regenerate from the source when CLDR adds renames.",
+  "groups": [
+    {
+      "bcp47": "arbue",
+      "aliases": ["America/Buenos_Aires", "America/Argentina/Buenos_Aires"],
+      "iana": "America/Argentina/Buenos_Aires"
+    },
+    {
+      "bcp47": "arcor",
+      "aliases": ["America/Cordoba", "America/Argentina/Cordoba", "America/Rosario"],
+      "iana": "America/Argentina/Cordoba"
+    },
+    {
+      "bcp47": "arctc",
+      "aliases": [
+        "America/Catamarca",
+        "America/Argentina/Catamarca",
+        "America/Argentina/ComodRivadavia"
+      ],
+      "iana": "America/Argentina/Catamarca"
+    },
+    {
+      "bcp47": "arjuj",
+      "aliases": ["America/Jujuy", "America/Argentina/Jujuy"],
+      "iana": "America/Argentina/Jujuy"
+    },
+    {
+      "bcp47": "armdz",
+      "aliases": ["America/Mendoza", "America/Argentina/Mendoza"],
+      "iana": "America/Argentina/Mendoza"
+    },
+    {
+      "bcp47": "cayzs",
+      "aliases": ["America/Coral_Harbour", "America/Atikokan"],
+      "iana": "America/Atikokan"
+    },
+    {
+      "bcp47": "erasm",
+      "aliases": ["Africa/Asmera", "Africa/Asmara"],
+      "iana": "Africa/Asmara"
+    },
+    {
+      "bcp47": "fmpni",
+      "aliases": ["Pacific/Ponape", "Pacific/Pohnpei"],
+      "iana": "Pacific/Pohnpei"
+    },
+    {
+      "bcp47": "fmtkk",
+      "aliases": ["Pacific/Truk", "Pacific/Chuuk", "Pacific/Yap"],
+      "iana": "Pacific/Chuuk"
+    },
+    {
+      "bcp47": "fotho",
+      "aliases": ["Atlantic/Faeroe", "Atlantic/Faroe"],
+      "iana": "Atlantic/Faroe"
+    },
+    {
+      "bcp47": "glgoh",
+      "aliases": ["America/Godthab", "America/Nuuk"],
+      "iana": "America/Nuuk"
+    },
+    {
+      "bcp47": "inccu",
+      "aliases": ["Asia/Calcutta", "Asia/Kolkata"],
+      "iana": "Asia/Kolkata"
+    },
+    {
+      "bcp47": "kipho",
+      "aliases": ["Pacific/Enderbury", "Pacific/Kanton"],
+      "iana": "Pacific/Kanton"
+    },
+    {
+      "bcp47": "mmrgn",
+      "aliases": ["Asia/Rangoon", "Asia/Yangon"],
+      "iana": "Asia/Yangon"
+    },
+    {
+      "bcp47": "npktm",
+      "aliases": ["Asia/Katmandu", "Asia/Kathmandu"],
+      "iana": "Asia/Kathmandu"
+    },
+    {
+      "bcp47": "uaiev",
+      "aliases": ["Europe/Kiev", "Europe/Kyiv", "Europe/Zaporozhye", "Europe/Uzhgorod"],
+      "iana": "Europe/Kyiv"
+    },
+    {
+      "bcp47": "usind",
+      "aliases": [
+        "America/Indianapolis",
+        "America/Fort_Wayne",
+        "America/Indiana/Indianapolis",
+        "US/East-Indiana"
+      ],
+      "iana": "America/Indiana/Indianapolis"
+    },
+    {
+      "bcp47": "uslui",
+      "aliases": ["America/Louisville", "America/Kentucky/Louisville"],
+      "iana": "America/Kentucky/Louisville"
+    },
+    {
+      "bcp47": "vnsgn",
+      "aliases": ["Asia/Saigon", "Asia/Ho_Chi_Minh"],
+      "iana": "Asia/Ho_Chi_Minh"
+    }
+  ]
+}

@@ -41,6 +41,7 @@ export const baseIgnores = {
   ignores: [
     '**/node_modules/**',
     '**/dist/**',
+    '**/dist-*/**',
     '**/coverage/**',
     '.worktrees/**',
     '**/*.tsbuildinfo',

@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpException, Post } from '@nestjs/common';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
-import { ErrorCode } from '@app/contracts';
+import { ErrorCode, IanaZoneSchema } from '@app/contracts';
 
 import { AppError } from '../../src/common/errors/app-error';
 
@@ -13,11 +13,18 @@ class ProbeBodyDto extends createZodDto(
   }),
 ) {}
 
+class ProbeZoneDto extends createZodDto(z.object({ timezone: IanaZoneSchema })) {}
+
 /** Test-only routes that trigger each error path of the HTTP pipeline. */
 @Controller('__probe')
 export class ProbeController {
   @Post('validate')
   validate(@Body() body: ProbeBodyDto): ProbeBodyDto {
+    return body;
+  }
+
+  @Post('zone')
+  zone(@Body() body: ProbeZoneDto): ProbeZoneDto {
     return body;
   }
 

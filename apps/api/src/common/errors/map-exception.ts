@@ -39,9 +39,13 @@ export function mapException(exception: unknown): MappedProblem {
     });
   }
   if (exception instanceof ZodValidationException) {
-    return problem(ErrorCode.VALIDATION_FAILED, {
-      detail: 'One or more fields are invalid.',
-      extras: { errors: fieldErrors(exception.getZodError()) },
+    const error = exception.getZodError();
+    const invalidZone = hasIssueCode(error, ErrorCode.INVALID_TIMEZONE);
+    return problem(invalidZone ? ErrorCode.INVALID_TIMEZONE : ErrorCode.VALIDATION_FAILED, {
+      detail: invalidZone
+        ? 'The time zone is not a known IANA zone.'
+        : 'One or more fields are invalid.',
+      extras: { errors: fieldErrors(error) },
     });
   }
   if (exception instanceof ThrottlerException) {
@@ -98,6 +102,18 @@ export function fieldErrors(error: unknown): FieldError[] {
     path: issue.path.map(String).join('.'),
     message: issue.message,
   }));
+}
+
+/**
+ * True when a schema marked one of the issues with its own error code
+ * (`params: { code }`, e.g. IanaZoneSchema -> INVALID_TIMEZONE).
+ */
+function hasIssueCode(error: unknown, code: ErrorCode): boolean {
+  if (!isZodError(error)) return false;
+  return error.issues.some(
+    (issue) =>
+      issue.code === 'custom' && (issue.params as { code?: unknown } | undefined)?.code === code,
+  );
 }
 
 // Duck-typed so errors from any zod entry point (classic, mini, core) are recognised.

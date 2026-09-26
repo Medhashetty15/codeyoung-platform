@@ -110,3 +110,19 @@ describe('fieldErrors', () => {
     expect(fieldErrors(null)).toEqual([]);
   });
 });
+
+describe('mapException: zone issues', () => {
+  it('reports an unknown time zone as INVALID_TIMEZONE with the field path', async () => {
+    const { IanaZoneSchema } = await import('@app/contracts');
+    const result = z.object({ timezone: IanaZoneSchema }).safeParse({ timezone: 'Mars/Olympus' });
+    if (result.success) throw new Error('fixture must be invalid');
+
+    const mapped = mapException(new ZodValidationException(result.error));
+
+    expect(mapped).toMatchObject({
+      code: 'INVALID_TIMEZONE',
+      status: 400,
+      extras: { errors: [{ path: 'timezone', message: 'Unknown time zone' }] },
+    });
+  });
+});

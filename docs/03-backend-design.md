@@ -279,7 +279,7 @@ CREATE UNIQUE INDEX waitlist_one_open_per_email ON waitlist_entries (email) WHER
 | Idempotent booking | `UNIQUE (parent_id, idempotency_key)`. |
 | No duplicate email per event/recipient | `email_deliveries` unique key. |
 | One open waitlist entry per email | Partial unique index. |
-| Valid zones | Checked against `Intl.supportedValuesOf('timeZone')` at the API/CLI boundary. |
+| Valid zones | Validated by Intl acceptance and canonicalised to the current IANA name at the API/CLI boundary (`IanaZoneSchema`, ADR 0017). |
 
 ## 4. Slot engine (availability)
 
@@ -427,7 +427,7 @@ also require the header `X-Requested-With: cy-web` (forces a CORS preflight) →
 ### 6.3 Passwords
 
 - argon2id via `argon2` (OWASP params: m = 19 MiB, t = 2, p = 1), PHC string stored; `needsRehash` on login.
-- Policy: 8–128 chars; not in a bundled top-10k common-password list; must not contain the email local part.
+- Policy: 8–128 chars; not in the bundled common-password list (the SecLists top 10k filtered to its 2,087 entries of at least 8 characters, `@app/contracts/common-passwords`); must not contain the email local part.
 
 ### 6.4 Authorisation
 
@@ -477,10 +477,10 @@ in-flight messages. Multiple worker replicas are safe.
 ### 7.3 Templates
 
 Handlebars (HTML + plain text), shared layout, CSS inlined (`juice`). Time strings come from
-`@app/time` `formatForHumans`, e.g.
+`@app/time` `formatForHumans`, with the same zone wording as the UI (PD-06; no abbreviations, no dashes), e.g.
 
-- Parent: **Saturday, 24 October 2026 · 5:00 – 6:00 PM BST (UTC+1) · London time**
-- Mentor: **Saturday, 24 October 2026 · 9:30 – 10:30 PM IST (UTC+5:30)** · parent is in Europe/London
+- Parent: **Saturday, 24 October 2026, 5:00 to 6:00 PM London time (GMT+1)**
+- Mentor: **Saturday, 24 October 2026, 9:30 to 10:30 PM Kolkata time (GMT+5:30)**, parent is in London time
 
 | Template | To | Attachment |
 |----------|----|------------|
@@ -503,12 +503,18 @@ Prod: SES/SendGrid SMTP. Sender, reply-to, and `List-Unsubscribe` not needed (tr
 
 `MeetingProvider.createMeeting(booking) → { meetingUrl, parentJoinToken, mentorJoinToken }`.
 `DummyMeetingProvider` issues 32-byte random tokens; join URL = `{WEB_BASE_URL}/class/{token}`.
-`GET /classroom/:token` returns the role, class times, status, first names and `serverTime`
-(client countdown corrects for clock skew). Swapping in Zoom/Meet later only changes the provider.
+`GET /classroom/:token` returns the role, the booking status, class times, first names, the
+participant's display zone, `classroomOpensMinutesBefore` and `serverTime` (PD-16). The client derives
+upcoming / open / live / ended from those (countdown corrected for clock skew); `RESCHEDULED` reads
+"This class was moved", and the new booking's join token is never exposed. Swapping in Zoom/Meet later
+only changes the provider.
 
 ## 9. REST API (v1)
 
 Base `/api/v1` · JSON · errors `application/problem+json` · OpenAPI at `/api/docs` (non-prod).
+The executable form of this section is `@app/contracts` (zod schemas and types for every body below,
+used by the API for validation and by the web app for parsing); fixture builders live in
+`@app/contracts/testing`. Every zone field accepts any known IANA id and is returned canonical (ADR 0017).
 
 ### Auth — `auth`
 
@@ -528,17 +534,17 @@ Base `/api/v1` · JSON · errors `application/problem+json` · OpenAPI at `/api/
 |--------|------|-----------------|
 | GET | `/me` | → `{id, email, fullName, phone, timezone}` |
 | PATCH | `/me` | `{fullName?, phone?, timezone?}` → user |
-| GET | `/me/students` | → `Student[]` |
-| POST | `/me/students` | `{firstName, age}` → `201 Student` |
+| GET | `/me/students` | → `Student[]`; `Student = {id, firstName, age, upcomingTrial: {bookingId, start} \| null}` (PD-04) |
+| POST | `/me/students` | `{firstName, age}` (first name 1 to 50 letters, age 4 to 18) → `201 Student` |
 | PATCH | `/me/students/:id` | `{firstName?, age?}` → Student |
 
 ### Availability — public
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/availability/slots?from=YYYY-MM-DD&days=1..14&tz=IANA` | Days grouped in `tz`; see example below. |
-| GET | `/meta/timezones` | `{ suggested: Zone[], all: Zone[] }` with city label + current offset. |
-| GET | `/meta/booking-config` | Duration, horizon, lead time, reschedule cutoff (so the UI never hard-codes them). |
+| GET | `/availability/slots?from=YYYY-MM-DD&days=1..14&tz=IANA` | Days grouped in `tz`; see example below. `from` is optional (defaults to today in `tz` by the server clock), `days` defaults to 14 (PD-13). |
+| GET | `/meta/timezones` | `{ suggested: Zone[], all: Zone[] }`, `Zone = {id, city, country, group?: US \| UK \| IN}`; canonical ids, labels computed client side per date. |
+| GET | `/meta/booking-config` | `{slotDurationMinutes, slotGridMinutes, horizonDays, leadTimeMinutes, rescheduleCutoffMinutes, classroomOpensMinutesBefore, mentorTimezone}` so the UI never hard-codes them (PD-03, PD-15). |
 
 ### Bookings — bearer, owner-scoped
 
@@ -547,7 +553,7 @@ Base `/api/v1` · JSON · errors `application/problem+json` · OpenAPI at `/api/
 | POST | `/bookings` | Header `Idempotency-Key` (UUID). `{slotStart, timezone, student: {id} \| {firstName, age}}` → `201 Booking` (replay → `200`) |
 | GET | `/bookings?scope=upcoming\|past&cursor=&limit=` | → `{items: BookingSummary[], nextCursor}` |
 | GET | `/bookings/:id` | → Booking |
-| POST | `/bookings/:id/cancel` | `{reason?}` → Booking |
+| POST | `/bookings/:id/cancel` | `{reason?: SCHEDULE_CHANGED \| CHILD_UNAVAILABLE \| BOOKED_BY_MISTAKE \| OTHER}` → Booking (PD-14; ops cancellations keep free text) |
 | POST | `/bookings/:id/reschedule` | Header `Idempotency-Key`. `{slotStart, timezone}` → `201 Booking` (new) |
 | GET | `/bookings/:id/calendar.ics` | → `text/calendar` |
 
@@ -555,7 +561,7 @@ Base `/api/v1` · JSON · errors `application/problem+json` · OpenAPI at `/api/
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/classroom/:joinToken` | Role-specific view + `serverTime`. |
+| GET | `/classroom/:joinToken` | `{role, status (BookingStatus), start, end, childFirstName, mentorFirstName, parentFirstName, timezone, serverTime, classroomOpensMinutesBefore}` (PD-16). |
 | POST | `/waitlist` | `{fullName, email, timezone, preferredTimes?}` → `201`; duplicates → `200` (idempotent). Links `user_id` if a valid bearer token is present. |
 | GET | `/health/live`, `/health/ready` | Liveness / DB readiness. |
 
@@ -616,25 +622,26 @@ Base `/api/v1` · JSON · errors `application/problem+json` · OpenAPI at `/api/
 
 | Code | HTTP | When |
 |------|------|------|
-| `VALIDATION_FAILED` | 400 | Schema violation; includes `errors: [{path, message}]`. |
-| `INVALID_TIMEZONE` | 400 | Unknown IANA zone. |
+| `VALIDATION_FAILED` | 400 | Schema violation (also malformed or oversized JSON); includes `errors: [{path, message}]` with dotted request field paths. |
+| `INVALID_TIMEZONE` | 400 | Unknown IANA zone; includes `errors` pointing at the field. |
 | `SLOT_NOT_ON_GRID` | 400 | Start not on the 30-min UTC grid. |
-| `WEAK_PASSWORD` | 400 | Fails policy (reason included). |
+| `WEAK_PASSWORD` | 400 | Fails policy; includes `reasons: (TOO_SHORT \| TOO_LONG \| COMMON \| CONTAINS_EMAIL)[]`. |
 | `RESET_TOKEN_INVALID` | 400 | Reset token unknown/used/expired. |
 | `UNAUTHENTICATED` | 401 | Missing/invalid/expired access token or revoked session. |
 | `INVALID_CREDENTIALS` | 401 | Bad email or password (indistinguishable). |
 | `REFRESH_TOKEN_INVALID` | 401 | Missing/expired refresh token. |
 | `REFRESH_TOKEN_REUSED` | 401 | Reuse detected; session revoked. |
+| `NOT_FOUND` | 404 | Unknown route (PD-12). |
 | `BOOKING_NOT_FOUND` / `STUDENT_NOT_FOUND` / `CLASSROOM_NOT_FOUND` | 404 | Unknown or not owned. |
 | `EMAIL_ALREADY_REGISTERED` | 409 | Register with an existing email. |
 | `NO_MENTOR_AVAILABLE` | 409 | Includes `alternatives`. |
 | `STUDENT_ALREADY_HAS_TRIAL` | 409 | Includes `bookingId`. |
-| `BOOKING_NOT_MODIFIABLE` | 409 | Wrong status or past cutoff (includes `reason`). |
+| `BOOKING_NOT_MODIFIABLE` | 409 | Includes `reason: NOT_CONFIRMED \| ALREADY_STARTED \| PAST_RESCHEDULE_CUTOFF`. |
 | `STUDENT_NAME_TAKEN` | 409 | Duplicate child name under one parent. |
 | `IDEMPOTENCY_KEY_REUSED` | 422 | Same key, different payload. |
 | `SLOT_IN_PAST` / `SLOT_OUTSIDE_HORIZON` | 422 | Outside `[now + lead, now + horizon]`. |
-| `RATE_LIMITED` / `ACCOUNT_TEMPORARILY_LOCKED` | 429 | Includes `Retry-After`. |
-| `TEMPORARILY_UNAVAILABLE` | 503 | Lock timeout; includes `Retry-After`. |
+| `RATE_LIMITED` / `ACCOUNT_TEMPORARILY_LOCKED` | 429 | `Retry-After` header, mirrored as `retryAfterSeconds` in the body. |
+| `TEMPORARILY_UNAVAILABLE` | 503 | Lock timeout or dependency down; `Retry-After` + `retryAfterSeconds`. |
 | `INTERNAL_ERROR` | 500 | Unexpected; details only in logs (by `traceId`). |
 
 ## 10. Ops CLI (`npm run cli -- <command>`)
@@ -665,7 +672,8 @@ Actor recorded in `booking_events` as `ops:<os-user>`.
 | `NODE_ENV` | `development` | |
 | `PORT` | 3000 | API port |
 | `DATABASE_URL` | — | Postgres |
-| `WEB_BASE_URL` | `http://localhost:5173` | Links in emails, CORS origin |
+| `WEB_BASE_URL` | `http://localhost:5173` | Links in emails, default CORS origin |
+| `CORS_ORIGINS` | web origin | Comma-separated CORS allow-list |
 | `SMTP_URL`, `MAIL_FROM` | Mailpit / `Codeyoung <trials@codeyoung.dev>` | Mail |
 | `JWT_ACCESS_SECRET` | — (≥ 32 bytes) | HS256 key |
 | `JWT_ACCESS_TTL_SEC` | 900 | 15 min |
@@ -684,6 +692,11 @@ Actor recorded in `booking_events` as `ops:<os-user>`.
 | `DEFAULT_MAX_TRIALS_PER_DAY` | 2 | |
 | `OUTBOX_POLL_MS` / `OUTBOX_MAX_ATTEMPTS` | 2000 / 8 | |
 | `LOG_LEVEL` | `info` | |
+| `LOG_PRETTY` | `true` in development | Human-readable logs |
+| `TRUST_PROXY_HOPS` | 0 | Reverse-proxy hops trusted for client IPs |
+| `RATE_LIMIT_MULTIPLIER` | 1 | Scales every rate limit (relaxed for e2e, PD-10); must be `<= 1` in production |
+| `CLASSROOM_OPENS_MIN_BEFORE` | 10 | Classroom opens this long before start (PD-15) |
+| `MENTOR_DISPLAY_TIMEZONE` | `Asia/Kolkata` | Zone shown for mentors in the UI (PD-03) |
 
 ## 12. Testing strategy
 

@@ -186,4 +186,5 @@ Recorded in [`docs/adr/`](adr/README.md): 0001 modular monolith · 0002 UTC inst
 0003 Temporal · 0004 DB-enforced invariants · 0005 transactional outbox · 0006 TypeORM rules ·
 0007 JWT + rotating refresh tokens · 0008 ops CLI · 0009 shared zod contracts · 0010 npm workspaces ·
 0011 assignment strategy · 0012 public browsing, account to book · 0013 no slot holds ·
-0014 Base UI + CSS-only motion · 0015 design system as source of truth.
+0014 Base UI + CSS-only motion · 0015 design system as source of truth · 0016 Figtree ·
+0017 canonical zone ids at boundaries.

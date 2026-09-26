@@ -34,7 +34,7 @@ export const ErrorCode = {
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
-export const errorCodeSchema = z.enum(ErrorCode);
+export const ErrorCodeSchema = z.enum(ErrorCode);
 
 /** HTTP status each code is always returned with. */
 export const errorCodeStatus = {
@@ -65,6 +65,35 @@ export const errorCodeStatus = {
   INTERNAL_ERROR: 500,
 } as const satisfies Record<ErrorCode, number>;
 
+/** Stable, human-readable `title` per code. Clients branch on `code`, never on this text. */
+export const errorTitles = {
+  VALIDATION_FAILED: 'The request is not valid',
+  INVALID_TIMEZONE: 'Unknown time zone',
+  SLOT_NOT_ON_GRID: 'The start time is not a bookable slot',
+  WEAK_PASSWORD: 'The password does not meet the policy',
+  RESET_TOKEN_INVALID: 'The reset link is invalid or has expired',
+  UNAUTHENTICATED: 'Authentication is required',
+  INVALID_CREDENTIALS: 'Email or password is incorrect',
+  REFRESH_TOKEN_INVALID: 'The session has expired',
+  REFRESH_TOKEN_REUSED: 'The session was revoked',
+  NOT_FOUND: 'Resource not found',
+  BOOKING_NOT_FOUND: 'Booking not found',
+  STUDENT_NOT_FOUND: 'Student not found',
+  CLASSROOM_NOT_FOUND: 'Class link not found',
+  EMAIL_ALREADY_REGISTERED: 'An account with this email already exists',
+  NO_MENTOR_AVAILABLE: 'No mentor is available for this time',
+  STUDENT_ALREADY_HAS_TRIAL: 'This student already has an upcoming trial',
+  BOOKING_NOT_MODIFIABLE: 'This booking can no longer be changed',
+  STUDENT_NAME_TAKEN: 'A student with this name already exists',
+  IDEMPOTENCY_KEY_REUSED: 'The idempotency key was used for a different request',
+  SLOT_IN_PAST: 'The time is too soon to book',
+  SLOT_OUTSIDE_HORIZON: 'The time is too far ahead to book',
+  RATE_LIMITED: 'Too many requests',
+  ACCOUNT_TEMPORARILY_LOCKED: 'The account is temporarily locked',
+  TEMPORARILY_UNAVAILABLE: 'The service is temporarily unavailable',
+  INTERNAL_ERROR: 'Something went wrong',
+} as const satisfies Record<ErrorCode, string>;
+
 /** Base URI for the RFC 7807 `type` member; the code is appended in kebab case. */
 export const ERROR_TYPE_BASE_URI = 'https://errors.codeyoung.dev/';
 
@@ -72,28 +101,28 @@ export function errorTypeUri(code: ErrorCode): string {
   return ERROR_TYPE_BASE_URI + code.toLowerCase().replaceAll('_', '-');
 }
 
-export const fieldErrorSchema = z.object({
+/** One invalid request field; `path` is dotted request field names, e.g. `student.firstName`. */
+export const FieldErrorSchema = z.object({
   path: z.string(),
   message: z.string(),
 });
-export type FieldError = z.infer<typeof fieldErrorSchema>;
+export type FieldError = z.infer<typeof FieldErrorSchema>;
 
 /**
- * RFC 7807 problem details as returned by every error response
- * (`Content-Type: application/problem+json`). Code-specific members
- * (`errors`, `alternatives`, `bookingId`, `reason`, ...) are added by
- * the schemas for those codes.
+ * Members every error response carries (`Content-Type: application/problem+json`).
+ * `ProblemSchema` (problems.ts) adds the code-specific members.
  */
-export const problemDetailsSchema = z.looseObject({
+export const ProblemDetailsSchema = z.looseObject({
   type: z.string(),
   title: z.string(),
-  status: z.number().int(),
-  code: errorCodeSchema,
+  status: z.int(),
+  code: ErrorCodeSchema,
   detail: z.string().optional(),
-  instance: z.string().optional(),
   traceId: z.string(),
-  errors: z.array(fieldErrorSchema).optional(),
+  errors: z.array(FieldErrorSchema).optional(),
+  /** Seconds to wait before retrying; mirrors `Retry-After` on 429 and 503. */
+  retryAfterSeconds: z.int().nonnegative().optional(),
 });
-export type ProblemDetails = z.infer<typeof problemDetailsSchema>;
+export type ProblemDetails = z.infer<typeof ProblemDetailsSchema>;
 
 export const PROBLEM_CONTENT_TYPE = 'application/problem+json';

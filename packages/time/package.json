@@ -18,8 +18,7 @@
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
     "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.json",
-    "test": "vitest run",
-    "test:cov": "vitest run --coverage",
+    "test": "vitest run --coverage",
     "clean": "rm -rf dist"
   },
   "dependencies": {

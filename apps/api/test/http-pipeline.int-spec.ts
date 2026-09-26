@@ -4,7 +4,7 @@ import request from 'supertest';
 import { type DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { problemDetailsSchema } from '@app/contracts';
+import { ProblemSchema } from '@app/contracts';
 
 import { ProbeController } from './support/probe.controller';
 import { createTestApp } from './support/test-app';
@@ -56,7 +56,7 @@ describe('HTTP pipeline', () => {
     it('returns documented extras for domain errors', async () => {
       const response = await http().get('/api/v1/__probe/app-error').expect(409);
 
-      expect(problemDetailsSchema.parse(response.body)).toMatchObject({
+      expect(ProblemSchema.parse(response.body)).toMatchObject({
         code: 'NO_MENTOR_AVAILABLE',
         detail: 'This time was just taken.',
         alternatives: [{ start: '2026-10-24T17:00:00Z', end: '2026-10-24T18:00:00Z' }],
@@ -127,8 +127,28 @@ describe('HTTP pipeline', () => {
     it('tells clients when to retry after TEMPORARILY_UNAVAILABLE', async () => {
       const response = await http().get('/api/v1/__probe/unavailable').expect(503);
 
-      expect(response.body).toMatchObject({ code: 'TEMPORARILY_UNAVAILABLE' });
+      expect(ProblemSchema.parse(response.body)).toMatchObject({
+        code: 'TEMPORARILY_UNAVAILABLE',
+        retryAfterSeconds: 5,
+      });
       expect(response.headers['retry-after']).toBe('5');
+    });
+
+    it('answers unknown zones with INVALID_TIMEZONE and canonicalises known ones', async () => {
+      const invalid = await http()
+        .post('/api/v1/__probe/zone')
+        .send({ timezone: 'Mars/Olympus' })
+        .expect(400);
+      const legacy = await http()
+        .post('/api/v1/__probe/zone')
+        .send({ timezone: 'Asia/Calcutta' })
+        .expect(201);
+
+      expect(invalid.body).toMatchObject({
+        code: 'INVALID_TIMEZONE',
+        errors: [{ path: 'timezone', message: 'Unknown time zone' }],
+      });
+      expect(legacy.body).toEqual({ timezone: 'Asia/Kolkata' });
     });
   });
 
@@ -216,8 +236,9 @@ describe('rate limiting', () => {
 
     const response = await http.get('/api/v1/__probe/app-error').expect(429);
 
-    expect(response.body).toMatchObject({ code: 'RATE_LIMITED', status: 429 });
+    expect(ProblemSchema.parse(response.body)).toMatchObject({ code: 'RATE_LIMITED', status: 429 });
     expect(Number(response.headers['retry-after'])).toBeGreaterThan(0);
+    expect(response.body.retryAfterSeconds).toBe(Number(response.headers['retry-after']));
   });
 
   it('never throttles health probes', async () => {
