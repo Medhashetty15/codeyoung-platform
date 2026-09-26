@@ -8,7 +8,11 @@ export interface ChoiceContextValue {
 
 export const ChoiceContext = createContext<ChoiceContextValue | null>(null);
 
-/** Props for the visually hidden native input inside a choice chip. */
+/**
+ * Props for the visually hidden native input inside a choice chip. `sr-only` positions it
+ * absolutely, so the chip's label must be `relative`: otherwise the input escapes a scrolling
+ * parent (the date strip) and widens the page.
+ */
 export function useChoice(value: string, disabled = false) {
   const group = use(ChoiceContext);
   if (!group) throw new Error('useChoice needs <ChoiceGroup>');

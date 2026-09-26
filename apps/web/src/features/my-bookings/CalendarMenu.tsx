@@ -1,47 +1,38 @@
-import type { Booking } from '@app/contracts';
+import { lazy, Suspense, useState } from 'react';
 
-import { unreachableText } from '../../shared/api/error-copy';
 import { Button } from '../../shared/ui/Button';
 import { CalendarPlusIcon } from '../../shared/ui/icons';
-import { Menu, MenuItem, MenuLinkItem } from '../../shared/ui/Menu';
-import { notify } from '../../shared/ui/notify';
-import { googleCalendarUrl } from '../booking';
 
-import { downloadIcs } from './ics';
+import type { CalendarMenuProps } from './menus';
+import { loadMenus } from './menus-loader';
 
-/** "Add to calendar": Google Calendar link or an .ics file for Apple and Outlook (doc 05 §6.1). */
-export function CalendarMenu({
-  booking,
-  primary = false,
-}: {
-  booking: Booking;
-  primary?: boolean;
-}) {
+const Menu = lazy(() => loadMenus().then((module) => ({ default: module.CalendarMenu })));
+
+/**
+ * "Add to calendar" with the menu code deferred: the same button shows until it arrives, and a
+ * press in that moment opens the menu as soon as it can.
+ */
+export function CalendarMenu({ booking, primary = false }: Omit<CalendarMenuProps, 'defaultOpen'>) {
+  const [pressed, setPressed] = useState(false);
   return (
-    <Menu
-      trigger={
+    <Suspense
+      fallback={
         <Button
           variant={primary ? 'primary' : 'secondary'}
           icon={<CalendarPlusIcon aria-hidden size={20} />}
+          aria-haspopup="menu"
+          onPointerDown={() => {
+            setPressed(true);
+          }}
+          onClick={() => {
+            setPressed(true);
+          }}
         >
           Add to calendar
         </Button>
       }
     >
-      <MenuLinkItem href={googleCalendarUrl(booking)} target="_blank" rel="noopener noreferrer">
-        Google Calendar
-      </MenuLinkItem>
-      <MenuItem
-        onClick={() => {
-          downloadIcs(booking).catch((error: unknown) => {
-            notify.error("We couldn't download the calendar file", {
-              description: unreachableText(error),
-            });
-          });
-        }}
-      >
-        Apple or Outlook (.ics)
-      </MenuItem>
-    </Menu>
+      <Menu booking={booking} primary={primary} defaultOpen={pressed} />
+    </Suspense>
   );
 }

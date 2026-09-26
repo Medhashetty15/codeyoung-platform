@@ -17,6 +17,8 @@ interface TabsProps<T extends string> {
   /** Accessible name for the tab list. */
   label: string;
   className?: string;
+  /** Layout for the tab list, e.g. a fixed width instead of the full row. */
+  listClassName?: string;
 }
 
 const tabClassName =
@@ -32,6 +34,7 @@ export function Tabs<T extends string>({
   onValueChange,
   label,
   className,
+  listClassName,
 }: TabsProps<T>) {
   const modality = useKeyboardModality();
   return (
@@ -45,7 +48,7 @@ export function Tabs<T extends string>({
       <BaseTabs.List
         aria-label={label}
         {...modality.props}
-        className="group/tabs relative flex rounded-control bg-sunken p-1"
+        className={cn('group/tabs relative flex rounded-control bg-sunken p-1', listClassName)}
       >
         {items.map((item) => (
           <BaseTabs.Tab

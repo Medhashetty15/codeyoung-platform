@@ -40,7 +40,11 @@ export function SlotTakenDialog({
           : 'That time was just booked by another family. Pick another time from the full list.'
       }
       actions={
-        <Link to={allTimesHref} className={buttonVariants({ variant: 'secondary' })}>
+        <Link
+          to={allTimesHref}
+          onClick={onClose}
+          className={buttonVariants({ variant: 'secondary' })}
+        >
           See all times
         </Link>
       }

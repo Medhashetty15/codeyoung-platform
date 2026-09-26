@@ -13,12 +13,14 @@ interface MenuProps {
   trigger: ComponentProps<typeof BaseMenu.Trigger>['render'];
   children: ReactNode;
   align?: 'start' | 'center' | 'end';
+  /** Opens on mount: a deferred menu that was tapped before its code arrived. */
+  defaultOpen?: boolean;
 }
 
 /** Origin-aware menu (doc 07 §6, motion row 8). */
-export function Menu({ trigger, children, align = 'start' }: MenuProps) {
+export function Menu({ trigger, children, align = 'start', defaultOpen = false }: MenuProps) {
   return (
-    <BaseMenu.Root>
+    <BaseMenu.Root defaultOpen={defaultOpen}>
       <BaseMenu.Trigger render={trigger} />
       <BaseMenu.Portal>
         <BaseMenu.Positioner sideOffset={6} align={align} className="z-50">
