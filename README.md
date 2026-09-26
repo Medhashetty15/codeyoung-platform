@@ -3,6 +3,18 @@
 Parents book a free trial class in their own time zone; the system assigns an available mentor
 and emails both sides. Design docs live in [`docs/`](docs/README.md).
 
+## Run it (Docker only)
+
+```sh
+docker compose --profile app up --build   # PostgreSQL, Mailpit, migrate + demo data, API, worker, web
+```
+
+Open http://localhost:8080 and book a trial as the demo parent `hannah.okafor@example.com` /
+`violet-harbour-lantern` (local seed data only), or register. Every email lands in Mailpit at
+http://localhost:8025. The API and worker run in production mode behind Caddy, which serves the
+web app and proxies `/api`. Use Chrome or Firefox (Safari drops Secure cookies on plain http).
+Details, ops commands and deployment: [docs/runbook.md](docs/runbook.md).
+
 ## Repository layout
 
 | Path                 | What                                                              |
@@ -11,12 +23,13 @@ and emails both sides. Design docs live in [`docs/`](docs/README.md).
 | `apps/web`           | React 19 + Vite web app, design system and component gallery      |
 | `packages/contracts` | `@app/contracts`: shared zod schemas, types and error codes       |
 | `packages/time`      | `@app/time`: Temporal-based time zone and DST helpers             |
-| `infra/`             | Local infrastructure support files (database init script)         |
+| `infra/`             | Database init script, Caddy config for the web image              |
+| `Dockerfile`         | Multi-stage build: `api` image (API, worker, CLI) and `web` image |
 | `docs/`              | Requirements, architecture, backend/frontend design, ADRs         |
 
 npm workspaces, TypeScript 6 (strict), ESLint 10 (flat config), Prettier, Vitest.
 
-## Quick start (backend)
+## Develop: backend
 
 Prerequisites: Node 22 (`nvm use`), npm 10, Docker.
 
@@ -37,18 +50,13 @@ curl localhost:3000/api/v1/health/ready    # {"status":"ok",...}
 - Classroom page data: `GET /api/v1/classroom/<join token>` (the token from a booking's join link).
 - Demo parent login: `hannah.okafor@example.com` / `violet-harbour-lantern` (children Leo 9 and
   Maya 12; override the password with `SEED_DEMO_PASSWORD`).
-- Ops CLI: `npm run cli -- --help` (builds, then runs), e.g. `npm run cli -- config:print`.
-  A mentor is ill: `npm run cli -- booking:list` (today, IST), then
-  `npm run cli -- booking:reassign CY-XXXXXX`, or when nobody is free
-  `npm run cli -- booking:cancel CY-XXXXXX --reason "Mentor ill"`; everyone is emailed. Failed
-  emails: `outbox:list`, `outbox:retry <id>`. Waitlist: `waitlist:list`, `waitlist:mark <id> CONTACTED`.
-  A whole sick day: `mentor:time-off:add <email> --from 2026-10-24T00:00+05:30 --to 2026-10-25T00:00+05:30 --reassign`.
-  Onboarding: `mentor:add`, then `mentor:availability:set <email> --file availability.json`.
-  Deletion request: `user:anonymise <email>`.
+- Ops CLI: `npm run cli -- --help` (builds, then runs), e.g. `npm run cli -- config:print`; see
+  [Operations](#operations).
 
 `docker compose` uses the project name `codeyoung`, so every worktree on a machine shares one
 PostgreSQL and one Mailpit. The init script creates `codeyoung_dev` (backend, API on 3000),
-`codeyoung_fe` (frontend's API instance on 3001) and `codeyoung_test`.
+`codeyoung_fe` (frontend's API instance on 3001), `codeyoung_test` and `codeyoung_app` (the
+Docker `app` profile; `db:create` adds it to an older volume).
 
 ## Quick start (web)
 
@@ -84,7 +92,8 @@ npm run dev:web                          # http://localhost:5173, /api proxied t
 | `npm run cli -- <command>`                                   | Build, then run an ops CLI command                                                  |
 
 CI (`.github/workflows/ci.yml`) runs lint, format, typecheck, unit and integration tests under both
-`TZ=UTC` and `TZ=America/New_York`, and the build.
+`TZ=UTC` and `TZ=America/New_York`, the build, and builds both Docker images. Integration tests
+need Docker: Testcontainers starts PostgreSQL 17 and Mailpit.
 
 ## API configuration
 
@@ -131,6 +140,22 @@ build) runs the background jobs of docs/03 §7.1, each in its own loop that neve
 | credential-cleanup | 1 day | Deletes expired refresh and reset tokens and sessions expired over 30 days |
 
 Several workers can run at once. `SIGTERM` stops scheduling and waits for runs in progress.
+
+## Operations
+
+Everything ops does runs through the CLI (`npm run cli -- <command>` locally,
+`node apps/api/dist/cli.js <command>` in the `api` image). Writes show a summary and ask first.
+The [runbook](docs/runbook.md) walks through each situation.
+
+| Situation                        | Commands                                                                                              |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Daily view                       | `booking:list` (today in IST, with each family's time), `mentor:list`, `waitlist:list`                |
+| Mentor ill for one class / a day | `booking:reassign <ref>` / `mentor:time-off:add <email> --from … --to … --reassign`                   |
+| Nobody can cover                 | `booking:cancel <ref> --reason "…"` (family gets an apology and a rebook link)                        |
+| New mentor                       | `mentor:add`, `mentor:availability:set <email> --file availability.json` (preview in IST, NY, London) |
+| Mentor leaves                    | `mentor:update <email> --active false --reassign`                                                     |
+| Emails failed                    | `outbox:list`, `outbox:retry <id>` or `--all-dead`                                                    |
+| Deletion request                 | `user:anonymise <email>`                                                                              |
 
 ## Conventions that CI enforces
 

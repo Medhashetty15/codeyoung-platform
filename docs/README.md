@@ -9,6 +9,7 @@
 | [05 — Frontend design](05-frontend-design.md) | Landing, booking flow & error states, screens, session handling, time-zone UX, SPA architecture, testing | Final |
 | [06 — Implementation plan](06-implementation-plan.md) | Milestones M0–M8, definition of done | Final |
 | [07 — Design system](07-design-system.md) | Design read, colour, type, shape, components, motion inventory, mobile baseline, copy rules, QA | Final |
+| [Runbook](runbook.md) | Running the product: processes, Docker stack, deploys, ops CLI situations (sick mentor, emails, deletion requests), secrets, backups | Final |
 | [ADRs](adr/README.md) | 15 architecture decision records (context, decision, alternatives, consequences, revisit triggers) | Accepted |
 
 ## Decisions
