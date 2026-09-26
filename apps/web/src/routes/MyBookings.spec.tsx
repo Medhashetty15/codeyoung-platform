@@ -127,7 +127,16 @@ describe('my bookings', () => {
       '/book',
     );
 
-    await userEvent.click(screen.getByRole('tab', { name: 'Past' }));
+    const trials = screen.getByRole('navigation', { name: 'Trials' });
+    expect(within(trials).getByRole('link', { name: 'Upcoming' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await userEvent.click(within(trials).getByRole('link', { name: 'Past' }));
+    expect(within(trials).getByRole('link', { name: 'Past' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     expect(await screen.findByText('Moved')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'See the new time' })).toHaveAttribute(
       'href',
