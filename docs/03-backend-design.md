@@ -427,7 +427,7 @@ also require the header `X-Requested-With: cy-web` (forces a CORS preflight) →
 ### 6.3 Passwords
 
 - argon2id via `argon2` (OWASP params: m = 19 MiB, t = 2, p = 1), PHC string stored; `needsRehash` on login.
-- Policy: 8–128 chars; not in a bundled top-10k common-password list; must not contain the email local part.
+- Policy: 8–128 chars; not in the bundled common-password list (the SecLists top 10k filtered to its 2,087 entries of at least 8 characters, `@app/contracts/common-passwords`); must not contain the email local part.
 
 ### 6.4 Authorisation
 
