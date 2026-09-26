@@ -3,7 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type buildSlotsResponse, slotsScenarios } from '@app/contracts/testing';
+import {
+  buildProblem,
+  buildWaitlistResponse,
+  type buildSlotsResponse,
+  slotsScenarios,
+} from '@app/contracts/testing';
 
 import { useSessionStore } from '../features/auth';
 import { useZoneStore } from '../features/timezone/zone-store';
@@ -125,6 +130,35 @@ describe('pick a time', () => {
       email: 'hannah@okafor.co.uk',
       timezone: 'Europe/London',
     });
+  });
+
+  it('shows server field errors, and treats an email already waiting as joined', async () => {
+    serve(slotsScenarios.windowEmpty());
+    let calls = 0;
+    server.use(
+      http.post('/api/v1/waitlist', () => {
+        calls += 1;
+        if (calls === 1) {
+          const body = buildProblem('VALIDATION_FAILED', {
+            errors: [{ path: 'email', message: 'Use a real email address.' }],
+          });
+          return HttpResponse.json(body, { status: body.status });
+        }
+        // 200, not 201: this email was already on the list (same entry back).
+        return HttpResponse.json(buildWaitlistResponse(), { status: 200 });
+      }),
+    );
+    renderApp('/book?tz=Europe/London');
+    await userEvent.type(await screen.findByLabelText('Full name'), 'Hannah Okafor');
+    await userEvent.type(screen.getByLabelText('Email'), 'hannah@okafor.co.uk');
+    await userEvent.click(screen.getByRole('button', { name: 'Join the waitlist' }));
+    expect(await screen.findByText('Use a real email address.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Join the waitlist' }));
+    expect(
+      await screen.findByText('We will email hannah@okafor.co.uk as soon as a time opens up.'),
+    ).toBeInTheDocument();
   });
 
   it('warns about the clock change in view', async () => {

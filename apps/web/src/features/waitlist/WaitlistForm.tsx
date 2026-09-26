@@ -18,6 +18,7 @@ import { Button } from '../../shared/ui/Button';
 import { Field, Input } from '../../shared/ui/Field';
 import { Notice } from '../../shared/ui/Notice';
 import { useMe } from '../auth';
+import { applyServerFieldErrors } from '../auth/form-errors';
 
 const FormSchema = WaitlistRequestSchema.pick({ fullName: true, email: true });
 type WaitlistValues = z.input<typeof FormSchema>;
@@ -57,7 +58,14 @@ export function WaitlistForm({ zone }: { zone: string }) {
   }
 
   const submit = form.handleSubmit((values) => {
-    join.mutate({ ...values, timezone: zone as WaitlistRequest['timezone'] });
+    join.mutate(
+      { ...values, timezone: zone as WaitlistRequest['timezone'] },
+      {
+        onError: (error) => {
+          applyServerFieldErrors(error, form.setError, ['fullName', 'email']);
+        },
+      },
+    );
   });
 
   return (
@@ -66,7 +74,7 @@ export function WaitlistForm({ zone }: { zone: string }) {
       onSubmit={(event) => void submit(event)}
       className="flex max-w-form flex-col gap-5"
     >
-      {join.isError && (
+      {join.isError && !isApiError(join.error, 'VALIDATION_FAILED') && (
         <Notice tone="danger" role="alert">
           {isApiError(join.error, 'RATE_LIMITED')
             ? tooManyAttemptsText(join.error)

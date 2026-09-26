@@ -38,19 +38,30 @@ function useTimezones() {
   });
 }
 
+interface ZonePickerProps {
+  at: InstantLike;
+  initiallyOpen?: boolean;
+  /** A form field's zone (the profile zone); without it the picker changes the display zone. */
+  value?: string;
+  onSelect?: (zone: string) => void;
+  align?: 'start' | 'end';
+}
+
 /** Zone picker: popover on desktop, bottom sheet on phones (doc 07 §6). */
 export function ZonePicker({
   at,
   initiallyOpen = false,
-}: {
-  at: InstantLike;
-  initiallyOpen?: boolean;
-}) {
-  const { zone, setZone } = useDisplayZone();
+  value,
+  onSelect,
+  align = 'end',
+}: ZonePickerProps) {
+  const display = useDisplayZone();
+  const zone = value ?? display.zone;
   const [open, setOpen] = useState(initiallyOpen);
   const desktop = useMediaQuery('(min-width: 40rem)');
   const select = (next: string) => {
-    setZone(next);
+    if (onSelect) onSelect(next);
+    else display.setZone(next);
     setOpen(false);
   };
   const trigger = <ZoneChipButton zone={zone} at={at} />;
@@ -61,7 +72,7 @@ export function ZonePicker({
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger render={trigger} />
         <Popover.Portal>
-          <Popover.Positioner sideOffset={8} align="end" className="z-50">
+          <Popover.Positioner sideOffset={8} align={align} className="z-50">
             <Popover.Popup
               aria-label="Time zone"
               className="motion-popover flex w-[22rem] flex-col rounded-surface bg-surface shadow-float ring-1 ring-line outline-none"

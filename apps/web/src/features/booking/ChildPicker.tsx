@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import type { Student } from '@app/contracts';
 import { formatDate } from '@app/time';
 
+import { CHILD_AGES, type ChildDraft } from '../../shared/lib/child';
 import { ChoiceGroup } from '../../shared/ui/ChoiceGroup';
 import { Field, Input, NativeSelect } from '../../shared/ui/Field';
 import { RadioCard } from '../../shared/ui/RadioCard';
@@ -10,10 +11,7 @@ import { textLinkClassName } from '../../shared/ui/text-link';
 
 export const NEW_CHILD = 'new';
 
-export interface NewChild {
-  firstName: string;
-  age: string;
-}
+export type NewChild = ChildDraft;
 
 interface ChildPickerProps {
   students: Student[];
@@ -27,8 +25,6 @@ interface ChildPickerProps {
   /** Inline reason after a 409 STUDENT_ALREADY_HAS_TRIAL for the chosen child. */
   alreadyBooked?: { studentId: string; bookingId: string; start: string } | undefined;
 }
-
-const AGES = Array.from({ length: 15 }, (_, index) => String(index + 4));
 
 /**
  * "Who is the class for?" (doc 05 §5.3). A child with an upcoming trial stays visible but
@@ -104,7 +100,7 @@ export function ChildPicker({
                 <option value="" disabled>
                   Age
                 </option>
-                {AGES.map((age) => (
+                {CHILD_AGES.map((age) => (
                   <option key={age} value={age}>
                     {age}
                   </option>

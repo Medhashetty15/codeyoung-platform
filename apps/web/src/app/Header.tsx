@@ -6,7 +6,7 @@ import { cn } from '../shared/lib/cn';
 import { buttonVariants } from '../shared/ui/button-variants';
 
 import { MobileNav } from './MobileNav';
-import { isAuthPage, isBookingFlow } from './nav';
+import { hasOwnZoneChip, isAuthPage, isBookingFlow } from './nav';
 import { loadAccountMenu } from './prefetch';
 import { Wordmark } from './Wordmark';
 
@@ -43,8 +43,8 @@ export function Header({ scrolled, zoneChip }: { scrolled: boolean; zoneChip?: R
       <div className="relative mx-auto flex h-16 max-w-content items-center gap-3 px-4">
         <Wordmark />
         <div className="ml-auto flex items-center gap-2">
-          {/* Booking pages show the chip next to the times instead. */}
-          {!isBookingFlow(pathname) && zoneChip}
+          {/* Booking and class pages show the chip next to the times instead. */}
+          {!hasOwnZoneChip(pathname) && zoneChip}
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
             {status === 'authenticated' && (
               <Link to="/bookings" className={buttonVariants({ variant: 'ghost' })}>

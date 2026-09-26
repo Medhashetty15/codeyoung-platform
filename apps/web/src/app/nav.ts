@@ -11,3 +11,8 @@ export function isBookingFlow(pathname: string): boolean {
 export function isAuthPage(pathname: string): boolean {
   return pathname === '/login' || pathname === '/register';
 }
+
+/** Pages that show the zone chip next to their own times, so the header does not repeat it. */
+export function hasOwnZoneChip(pathname: string): boolean {
+  return isBookingFlow(pathname) || pathname.startsWith('/class/');
+}
