@@ -322,8 +322,11 @@ sequenceDiagram
 
 ## 11. Time-zone UX
 
-- **Display zone resolution:** `?tz` in URL, then profile zone (logged in), then saved preference
-  (`localStorage`, try/catch), then device zone (`Intl.DateTimeFormat().resolvedOptions().timeZone`), then UTC.
+- **Display zone resolution:** `?tz` in URL, then a zone picked during this visit, then profile zone
+  (logged in), then saved preference (`localStorage`, try/catch), then device zone
+  (`Intl.DateTimeFormat().resolvedOptions().timeZone`), then UTC. Ids are canonicalised first
+  (`Asia/Calcutta` becomes `Asia/Kolkata`). A pick made this visit must win over the profile, or
+  choosing "Just for now" in the profile prompt would appear to do nothing.
 - **Zone label** (`zoneLabel(zone, instant)` in `@app/time`, shared with emails): US zones use the generic
   name ("Eastern Time (GMT-4)"), others the city ("London time (GMT+1)", "Kolkata time (GMT+5:30)").
   Offsets computed for the dates on screen, so after 25 Oct the label reads "London time (GMT)".
