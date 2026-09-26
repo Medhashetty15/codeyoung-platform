@@ -359,6 +359,12 @@ async create(parentId, cmd, idempotencyKey): Promise<Booking> {
   mentor-lock deadlocks. Serialisation failures/deadlocks (`40001`/`40P01`) are retried once anyway.
 - Lock timeout → `503 TEMPORARILY_UNAVAILABLE` with `Retry-After: 2`.
 - Reminders whose `run_after` is already in the past (booking < 24 h ahead) are not enqueued.
+- Idempotency covers twin requests too: if a request with the same key commits while another is
+  running, the other answers as a replay (`200`, same booking) whatever it ran into (no mentor left,
+  child already booked, unique violation). A missing or non-UUID `Idempotency-Key` is
+  `400 VALIDATION_FAILED`.
+- The re-check under the mentor lock is the slot engine itself, run for that one mentor with data read
+  inside the transaction; the exclusion constraint remains the final guard.
 
 ### 5.2 Assignment strategy
 
