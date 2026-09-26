@@ -278,4 +278,16 @@ export class BookingsRepository {
     const row = await this.manager.findOneByOrFail(BookingEntity, { id });
     return toBookingRecord(row);
   }
+
+  /** A mentor's confirmed classes that have not started, soonest first. */
+  async upcomingForMentor(mentorId: string, now: Temporal.Instant): Promise<BookingRecord[]> {
+    const rows = await this.manager
+      .createQueryBuilder(BookingEntity, 'booking')
+      .where('booking.mentorId = :mentorId', { mentorId })
+      .andWhere(`booking.status = 'CONFIRMED'`)
+      .andWhere('booking.startsAt > :now', { now: toDate(now) })
+      .orderBy('booking.startsAt')
+      .getMany();
+    return rows.map(toBookingRecord);
+  }
 }

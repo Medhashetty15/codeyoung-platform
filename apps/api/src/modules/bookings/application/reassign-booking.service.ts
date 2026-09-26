@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, type EntityManager } from 'typeorm';
 
 import { ErrorCode } from '@app/contracts';
 
@@ -52,11 +52,16 @@ export class ReassignBookingService {
     const booking = await this.bookings.findByReference(reference);
     if (booking === null) throw bookingNotFound();
     this.assertMovable(booking);
+    return { booking, mentorIds: await this.rankedCover(booking) };
+  }
+
+  /** Other mentors free for this booking's time, best first (lead time does not apply). */
+  async rankedCover(booking: BookingRecord): Promise<string[]> {
     const free = (await this.availability.candidates(booking.startsAt, booking.id, 'ops')).filter(
       (id) => id !== booking.mentorId,
     );
     const ranked = this.strategy.rank(await this.loads.forSlot(free, booking.startsAt));
-    return { booking, mentorIds: ranked.map((load) => load.mentorId) };
+    return ranked.map((load) => load.mentorId);
   }
 
   async reassign(reference: string, actor: string): Promise<ReassignOutcome> {
@@ -64,30 +69,46 @@ export class ReassignBookingService {
     if (mentorIds.length === 0) return { kind: 'no-mentor', booking };
     try {
       return await inLockingTransaction(this.dataSource, async (manager) => {
-        const locked = await this.bookings.withManager(manager).lockByReference(reference);
-        if (locked === null) throw bookingNotFound();
-        this.assertMovable(locked);
-        const moved = await this.placer.reassign(manager, locked, mentorIds);
+        const moved = await this.moveWithin(manager, reference, mentorIds, actor);
         if (moved === null) throw new NoMentorPlaced();
-        await this.events.withManager(manager).append(moved.id, 'REASSIGNED', actor, {
-          fromMentorId: locked.mentorId,
-          toMentorId: moved.mentorId,
-        });
-        await this.outbox.withManager(manager).enqueue('BookingReassigned', {
-          bookingId: moved.id,
-          previousMentorId: locked.mentorId,
-        });
-        await this.mentors.withManager(manager).touchLastAssigned(moved.mentorId, this.clock.now());
-        this.logger.log(
-          { booking: moved.reference, from: locked.mentorId, to: moved.mentorId },
-          'Booking reassigned',
-        );
-        return { kind: 'reassigned', booking: moved, previousMentorId: locked.mentorId } as const;
+        return { kind: 'reassigned', ...moved } as const;
       });
     } catch (error) {
       if (error instanceof NoMentorPlaced) return { kind: 'no-mentor', booking };
       throw error;
     }
+  }
+
+  /**
+   * Moves a booking inside the caller's transaction (schedule changes move
+   * several at once, all or nothing): row lock, placement under the new
+   * mentor's lock, audit event and BookingReassigned. Null when nobody took it.
+   */
+  async moveWithin(
+    manager: EntityManager,
+    reference: string,
+    rankedMentorIds: readonly string[],
+    actor: string,
+  ): Promise<{ booking: BookingRecord; previousMentorId: string } | null> {
+    const locked = await this.bookings.withManager(manager).lockByReference(reference);
+    if (locked === null) throw bookingNotFound();
+    this.assertMovable(locked);
+    const moved = await this.placer.reassign(manager, locked, rankedMentorIds);
+    if (moved === null) return null;
+    await this.events.withManager(manager).append(moved.id, 'REASSIGNED', actor, {
+      fromMentorId: locked.mentorId,
+      toMentorId: moved.mentorId,
+    });
+    await this.outbox.withManager(manager).enqueue('BookingReassigned', {
+      bookingId: moved.id,
+      previousMentorId: locked.mentorId,
+    });
+    await this.mentors.withManager(manager).touchLastAssigned(moved.mentorId, this.clock.now());
+    this.logger.log(
+      { booking: moved.reference, from: locked.mentorId, to: moved.mentorId },
+      'Booking reassigned',
+    );
+    return { booking: moved, previousMentorId: locked.mentorId };
   }
 
   private assertMovable(booking: BookingRecord): void {
