@@ -6,9 +6,12 @@ import { addMinutes, localDateOf, type Temporal } from '@app/time';
 import { Clock } from '../../../common/clock/clock';
 import { AppConfig } from '../../../config/app-config';
 import { isExclusionViolation, isUniqueViolation } from '../../../database/pg-errors';
-import { AvailabilityService } from '../../availability/application/availability.service';
+import {
+  AvailabilityService,
+  type BookingWindow,
+} from '../../availability/application/availability.service';
 import { MeetingProvider } from '../../classroom/domain/meeting-provider';
-import { MentorsRepository } from '../../mentors/infra/mentors.repository';
+import { type LockedMentor, MentorsRepository } from '../../mentors/infra/mentors.repository';
 import { newBookingReference } from '../domain/booking-reference';
 import { type BookingRecord, BookingsRepository } from '../infra/bookings.repository';
 
@@ -50,9 +53,73 @@ export class BookingPlacer {
 
   /** The new booking, or null when no candidate could take the slot. */
   async place(manager: EntityManager, placement: Placement): Promise<BookingRecord | null> {
-    for (const mentorId of placement.rankedMentorIds) {
+    return this.firstThatTakes(
+      manager,
+      placement.rankedMentorIds,
+      {
+        start: placement.slotStart,
+        excludeBookingId: placement.excludeBookingId,
+        window: 'parent',
+      },
+      (mentor) => this.insertFor(manager, placement, mentor),
+    );
+  }
+
+  /**
+   * Ops reassign (docs/03 §5.3): the same booking row moves to the first
+   * candidate that is still free under its lock, with a new mentor link and
+   * the next calendar sequence. Lead time and horizon do not apply.
+   */
+  async reassign(
+    manager: EntityManager,
+    booking: BookingRecord,
+    rankedMentorIds: readonly string[],
+  ): Promise<BookingRecord | null> {
+    return this.firstThatTakes(
+      manager,
+      rankedMentorIds.filter((id) => id !== booking.mentorId),
+      { start: booking.startsAt, excludeBookingId: booking.id, window: 'ops' },
+      async (mentor) => {
+        try {
+          return await this.bookings.withManager(manager).assignMentor(booking.id, {
+            mentorId: mentor.id,
+            mentorTimezone: mentor.timezone,
+            mentorLocalDate: localDateOf(booking.startsAt, mentor.timezone),
+            mentorJoinToken: this.meetings.createMeeting().mentorJoinToken,
+          });
+        } catch (error) {
+          if (isExclusionViolation(error, 'bookings_no_mentor_overlap')) return null;
+          throw error;
+        }
+      },
+    );
+  }
+
+  /**
+   * Tries each mentor in its own savepoint: lock the mentor row, re-check it
+   * under the lock, then `take`. A null from `take` rolls the savepoint back
+   * (releasing that mentor's lock) and moves on.
+   */
+  private async firstThatTakes(
+    manager: EntityManager,
+    mentorIds: readonly string[],
+    slot: { start: Temporal.Instant; excludeBookingId: string | undefined; window: BookingWindow },
+    take: (mentor: LockedMentor) => Promise<BookingRecord | null>,
+  ): Promise<BookingRecord | null> {
+    for (const mentorId of mentorIds) {
       await manager.query(`SAVEPOINT ${SAVEPOINT}`);
-      const booking = await this.tryMentor(manager, placement, mentorId);
+      const mentor = await this.mentors.withManager(manager).lockById(mentorId);
+      const free =
+        mentor !== null &&
+        mentor.isActive &&
+        (await this.availability.isFreeUnderLock(
+          manager,
+          mentor.id,
+          slot.start,
+          slot.excludeBookingId,
+          slot.window,
+        ));
+      const booking = free ? await take(mentor) : null;
       if (booking === null) {
         await manager.query(`ROLLBACK TO SAVEPOINT ${SAVEPOINT}`);
         continue;
@@ -63,21 +130,11 @@ export class BookingPlacer {
     return null;
   }
 
-  private async tryMentor(
+  private async insertFor(
     manager: EntityManager,
     placement: Placement,
-    mentorId: string,
+    mentor: LockedMentor,
   ): Promise<BookingRecord | null> {
-    const mentor = await this.mentors.withManager(manager).lockById(mentorId);
-    if (mentor === null || !mentor.isActive) return null;
-    const free = await this.availability.isFreeUnderLock(
-      manager,
-      mentor.id,
-      placement.slotStart,
-      placement.excludeBookingId,
-    );
-    if (!free) return null;
-
     const booking = this.config.booking;
     const endsAt = addMinutes(placement.slotStart, booking.trialDurationMinutes);
     const meeting = this.meetings.createMeeting();

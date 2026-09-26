@@ -114,6 +114,20 @@ export class BookingsRepository {
     return row && toBookingRecord(row);
   }
 
+  /** Row-locks any booking by its reference, for ops (docs/03 §10). */
+  async lockByReference(reference: string): Promise<BookingRecord | null> {
+    const row = await this.manager.findOne(BookingEntity, {
+      where: { reference: reference.toUpperCase() },
+      lock: { mode: 'pessimistic_write' },
+    });
+    return row && toBookingRecord(row);
+  }
+
+  async findByReference(reference: string): Promise<BookingRecord | null> {
+    const row = await this.manager.findOneBy(BookingEntity, { reference: reference.toUpperCase() });
+    return row && toBookingRecord(row);
+  }
+
   async findByIdempotencyKey(parentId: string, key: string): Promise<BookingRecord | null> {
     const row = await this.manager.findOneBy(BookingEntity, { parentId, idempotencyKey: key });
     return row && toBookingRecord(row);
@@ -240,5 +254,28 @@ export class BookingsRepository {
       [toDate(endedBefore), toDate(at), limit],
     );
     return rows.length;
+  }
+
+  /**
+   * Moves a booking to another mentor (ops reassign): new mentor link, next
+   * calendar sequence. The exclusion constraint rejects an overlap.
+   */
+  async assignMentor(
+    id: string,
+    mentor: {
+      mentorId: string;
+      mentorTimezone: string;
+      mentorLocalDate: LocalDate;
+      mentorJoinToken: string;
+    },
+  ): Promise<BookingRecord> {
+    await this.manager
+      .createQueryBuilder()
+      .update(BookingEntity)
+      .set({ ...mentor, icsSequence: () => 'ics_sequence + 1' })
+      .where('id = :id', { id })
+      .execute();
+    const row = await this.manager.findOneByOrFail(BookingEntity, { id });
+    return toBookingRecord(row);
   }
 }
