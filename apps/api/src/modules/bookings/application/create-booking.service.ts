@@ -176,7 +176,8 @@ export class CreateBookingService {
     });
   }
 
-  private async replay(
+  /** The booking an earlier request with this key produced, if the request matches (E-2). */
+  async replay(
     parentId: string,
     idempotencyKey: string,
     fingerprint: string,

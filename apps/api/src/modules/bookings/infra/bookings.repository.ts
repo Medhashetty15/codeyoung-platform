@@ -1,4 +1,4 @@
-import { type EntityManager } from 'typeorm';
+import { Brackets, type EntityManager, In } from 'typeorm';
 
 import { type BookingStatus } from '@app/contracts';
 import { fromDate, type LocalDate, type Temporal, toDate } from '@app/time';
@@ -127,10 +127,90 @@ export class BookingsRepository {
 
   /** Id of the booking this one was rescheduled into, if any. */
   async rescheduledToId(id: string): Promise<string | null> {
-    const row = await this.manager.findOne(BookingEntity, {
-      select: { id: true },
-      where: { rescheduledFromId: id },
+    return (await this.rescheduledToIds([id])).get(id) ?? null;
+  }
+
+  async rescheduledToIds(ids: readonly string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.manager.find(BookingEntity, {
+      select: { id: true, rescheduledFromId: true },
+      where: { rescheduledFromId: In([...ids]) },
     });
-    return row?.id ?? null;
+    return new Map(
+      rows.flatMap((row) =>
+        row.rescheduledFromId === null ? [] : [[row.rescheduledFromId, row.id]],
+      ),
+    );
+  }
+
+  /**
+   * A page of a parent's bookings. Upcoming = confirmed and not yet ended,
+   * soonest first; past = everything else, latest first. Keyset pagination on
+   * (starts_at, id) so pages stay stable while bookings change.
+   */
+  async listPage(
+    parentId: string,
+    scope: 'upcoming' | 'past',
+    now: Temporal.Instant,
+    after: { startsAt: Temporal.Instant; id: string } | null,
+    limit: number,
+  ): Promise<BookingRecord[]> {
+    const upcoming = scope === 'upcoming';
+    const direction = upcoming ? 'ASC' : 'DESC';
+    const query = this.manager
+      .createQueryBuilder(BookingEntity, 'booking')
+      .where('booking.parentId = :parentId', { parentId })
+      .andWhere(
+        upcoming
+          ? `booking.status = 'CONFIRMED' AND booking.endsAt > :now`
+          : `NOT (booking.status = 'CONFIRMED' AND booking.endsAt > :now)`,
+        { now: toDate(now) },
+      )
+      .orderBy('booking.startsAt', direction)
+      .addOrderBy('booking.id', direction)
+      .take(limit);
+    if (after !== null) {
+      const comparison = upcoming ? '>' : '<';
+      query.andWhere(
+        new Brackets((clause) => {
+          clause
+            .where(`booking.startsAt ${comparison} :afterStart`)
+            .orWhere(`booking.startsAt = :afterStart AND booking.id ${comparison} :afterId`);
+        }),
+        { afterStart: toDate(after.startsAt), afterId: after.id },
+      );
+    }
+    return (await query.getMany()).map(toBookingRecord);
+  }
+
+  /** Parent or ops cancellation: frees capacity at once (E-12); calendars get a new sequence. */
+  async markCancelled(
+    id: string,
+    by: CancelledBy,
+    reason: string | null,
+    at: Temporal.Instant,
+  ): Promise<void> {
+    await this.manager
+      .createQueryBuilder()
+      .update(BookingEntity)
+      .set({
+        status: 'CANCELLED',
+        cancelledBy: by,
+        cancelReason: reason,
+        cancelledAt: toDate(at),
+        icsSequence: () => 'ics_sequence + 1',
+      })
+      .where('id = :id', { id })
+      .execute();
+  }
+
+  /** The old side of a reschedule: no longer confirmed, so its time and cap are free. */
+  async markRescheduled(id: string): Promise<void> {
+    await this.manager
+      .createQueryBuilder()
+      .update(BookingEntity)
+      .set({ status: 'RESCHEDULED', icsSequence: () => 'ics_sequence + 1' })
+      .where('id = :id', { id })
+      .execute();
   }
 }

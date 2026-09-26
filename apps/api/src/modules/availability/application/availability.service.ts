@@ -142,6 +142,15 @@ export class AvailabilityService {
     return computation.free[0]?.mentorIds.includes(mentorId) ?? false;
   }
 
+  /** Every bookable start in `[from, to)` with the mentors free for it (ops tooling). */
+  async freeSlots(
+    from: Temporal.Instant,
+    to: Temporal.Instant,
+    manager?: EntityManager,
+  ): Promise<SlotComputation['free']> {
+    return (await this.compute(from, to, this.clock.now(), { manager })).free;
+  }
+
   /** Bookable slots closest to `around` (either side), earliest first: conflict alternatives. */
   async nearest(
     around: Temporal.Instant,

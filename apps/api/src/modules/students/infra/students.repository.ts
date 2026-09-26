@@ -1,4 +1,4 @@
-import { type EntityManager } from 'typeorm';
+import { type EntityManager, In } from 'typeorm';
 
 import { StudentEntity } from './student.entity';
 
@@ -36,6 +36,15 @@ export class StudentsRepository {
       order: { createdAt: 'ASC', firstName: 'ASC' },
     });
     return rows.map(toRecord);
+  }
+
+  async findOwnedMany(
+    parentId: string,
+    ids: readonly string[],
+  ): Promise<Map<string, StudentRecord>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.manager.findBy(StudentEntity, { parentId, id: In([...ids]) });
+    return new Map(rows.map((row) => [row.id, toRecord(row)]));
   }
 
   async findOwned(parentId: string, id: string): Promise<StudentRecord | null> {

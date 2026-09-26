@@ -15,6 +15,10 @@ export class ManualClock extends Clock {
     return this.current;
   }
 
+  set(instant: Temporal.Instant | string): void {
+    this.current = typeof instant === 'string' ? Temporal.Instant.from(instant) : instant;
+  }
+
   advance(duration: Temporal.DurationLike): void {
     this.current = this.current.add(duration);
   }
