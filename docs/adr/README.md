@@ -7,7 +7,7 @@ Records are immutable once accepted; a change of mind is a new ADR that supersed
 | # | Title | Status | Area |
 |---|-------|--------|------|
 | [0001](0001-modular-monolith-with-api-worker-cli.md) | Modular monolith with API, worker and CLI entry points | Accepted | Architecture |
-| [0002](0002-utc-instants-and-iana-zones.md) | Store UTC instants and IANA zones, never offsets | Accepted | Time |
+| [0002](0002-utc-instants-and-iana-zones.md) | Store UTC instants and IANA zones, never offsets | Accepted, amended by 0017 | Time |
 | [0003](0003-temporal-api-for-zone-math.md) | Temporal API (polyfill) with explicit DST disambiguation | Accepted | Time |
 | [0004](0004-db-enforced-booking-invariants.md) | Enforce booking invariants in PostgreSQL | Accepted | Data / concurrency |
 | [0005](0005-transactional-outbox.md) | Transactional outbox + worker instead of Redis/BullMQ | Accepted | Messaging |
@@ -22,5 +22,6 @@ Records are immutable once accepted; a change of mind is a new ADR that supersed
 | [0014](0014-base-ui-tailwind-css-only-motion.md) | Base UI + Tailwind v4 + cva, CSS-only motion | Accepted | Frontend |
 | [0015](0015-design-system-as-source-of-truth.md) | Design system doc as the single source of visual truth | Accepted, amended by 0016 | Frontend / design |
 | [0016](0016-replace-satoshi-with-figtree.md) | Replace Satoshi with Figtree (licence) | Accepted | Frontend / design |
+| [0017](0017-canonicalise-iana-zone-ids-at-boundaries.md) | Canonicalise IANA zone ids at every boundary | Accepted | Time |
 
 Template for new records: [template.md](template.md).
