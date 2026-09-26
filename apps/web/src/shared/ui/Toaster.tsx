@@ -1,6 +1,9 @@
+import { useEffect } from 'react';
 import { Toaster as SonnerToaster } from 'sonner';
 
 import { useTheme } from '../theme/theme';
+
+import { markToasterReady } from './notify';
 
 /**
  * Mounted once at the root. Bottom-right on desktop; on phones Sonner spans the width at the bottom,
@@ -8,6 +11,7 @@ import { useTheme } from '../theme/theme';
  */
 export function Toaster() {
   const theme = useTheme((state) => state.resolved);
+  useEffect(markToasterReady, []);
   return (
     <SonnerToaster
       theme={theme}

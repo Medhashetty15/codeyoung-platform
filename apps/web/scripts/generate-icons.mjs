@@ -36,9 +36,11 @@ export const ICONS = [
   'plus',
   'sign-out',
   'sun',
+  'user-circle',
   'video-camera',
   'warning',
   'warning-circle',
+  'wifi-slash',
   'x',
 ];
 

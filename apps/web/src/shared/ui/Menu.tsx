@@ -3,6 +3,8 @@ import type { ComponentProps, ReactNode } from 'react';
 
 import { cn } from '../lib/cn';
 
+import { CheckIcon } from './icons';
+
 export const popupSurfaceClassName =
   'motion-popover rounded-surface bg-surface p-1.5 shadow-float ring-1 ring-line outline-none';
 
@@ -48,6 +50,35 @@ export function MenuItem({
 export function MenuLinkItem({ className, ...props }: ComponentProps<typeof BaseMenu.LinkItem>) {
   return <BaseMenu.LinkItem className={cn(itemClassName, className)} {...props} />;
 }
+
+export const MenuRadioGroup = BaseMenu.RadioGroup;
+
+export function MenuRadioItem({
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof BaseMenu.RadioItem>) {
+  return (
+    <BaseMenu.RadioItem className={cn(itemClassName, className)} {...props}>
+      <span className="flex size-5 items-center justify-center">
+        <BaseMenu.RadioItemIndicator>
+          <CheckIcon aria-hidden size={16} className="text-accent" />
+        </BaseMenu.RadioItemIndicator>
+      </span>
+      {children}
+    </BaseMenu.RadioItem>
+  );
+}
+
+export function MenuGroupLabel({ children }: { children: ReactNode }) {
+  return (
+    <BaseMenu.GroupLabel className="px-3 pt-2 pb-1 text-micro text-ink-muted uppercase">
+      {children}
+    </BaseMenu.GroupLabel>
+  );
+}
+
+export const MenuGroup = BaseMenu.Group;
 
 export function MenuSeparator() {
   return <BaseMenu.Separator className="mx-1.5 my-1 h-px bg-line" />;

@@ -27,6 +27,8 @@ export default defineConfig(({ mode }) => {
     build: {
       target: 'es2022',
       sourcemap: true,
+      // Read by scripts/bundle-budget.mjs to measure what each route really downloads.
+      manifest: true,
     },
     test: {
       environment: 'jsdom',

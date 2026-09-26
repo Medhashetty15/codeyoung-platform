@@ -17,7 +17,7 @@ const LAYER_ZONES = [
   {
     target: './src',
     from: './src/dev',
-    except: ['./main.tsx', './dev'],
+    except: ['./app/router.tsx', './dev'],
     message: 'dev/ is the dev-only gallery.',
   },
 ];
