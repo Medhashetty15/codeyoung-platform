@@ -3,8 +3,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { api, configureApiAuth, REQUESTED_WITH } from '../../shared/api/client';
 
 import { refreshSession, type RefreshResult } from './refresh';
-import { loginPathFor } from './return-to';
-import { useSessionStore } from './session-store';
+import { useSessionStore, type SessionEnd } from './session-store';
 
 /** Refresh this long before the access token expires (doc 05 §10). */
 const PROACTIVE_REFRESH_MS = 60_000;
@@ -15,8 +14,7 @@ type AuthMessage = { type: 'login' } | { type: 'logout' };
 interface SessionDeps {
   queryClient: QueryClient;
   /** Router navigation; `replace` for redirects the user did not ask for. */
-  navigate: (to: string, options?: { replace?: boolean; state?: unknown }) => void;
-  currentPath: () => string;
+  navigate: (to: string, options?: { replace?: boolean }) => Promise<void> | void;
 }
 
 let deps: SessionDeps | null = null;
@@ -44,13 +42,26 @@ function scheduleProactiveRefresh(expiresInSeconds: number): void {
 
 /** Stores a fresh access token (after login, register or refresh) and plans the next refresh. */
 export function startSession(result: RefreshResult): void {
-  useSessionStore.setState({ status: 'authenticated', accessToken: result.accessToken });
+  useSessionStore.setState({
+    status: 'authenticated',
+    accessToken: result.accessToken,
+    endedBy: null,
+  });
   scheduleProactiveRefresh(result.expiresIn);
 }
 
-function clearLocalSession(): void {
+/**
+ * Ends the session in this tab. `endedBy` tells guards what happened: after a logout the app goes
+ * home by itself; after an expiry protected pages send the parent to log in with a notice.
+ */
+function clearLocalSession(endedBy: SessionEnd): void {
   clearTimeout(refreshTimer);
-  useSessionStore.setState({ status: 'anonymous', accessToken: null });
+  const wasSignedIn = useSessionStore.getState().status === 'authenticated';
+  useSessionStore.setState({
+    status: 'anonymous',
+    accessToken: null,
+    endedBy: wasSignedIn ? endedBy : null,
+  });
   // Nothing from the previous user may survive into the next one (doc 05 §1 goal 6).
   deps?.queryClient.clear();
 }
@@ -62,7 +73,7 @@ export async function refreshAccessToken(): Promise<string | null> {
     startSession(result);
     return result.accessToken;
   }
-  clearLocalSession();
+  clearLocalSession('expired');
   return null;
 }
 
@@ -78,28 +89,21 @@ export async function logout(): Promise<void> {
   } catch {
     // Logout is idempotent server-side; the local session ends regardless.
   }
-  clearLocalSession();
+  clearLocalSession('logout');
   broadcast({ type: 'logout' });
-  requireDeps().navigate('/', { replace: true });
+  await requireDeps().navigate('/', { replace: true });
 }
 
-/** The refresh token is gone mid-visit: back to login with a notice, returning here afterwards. */
-function sessionExpired(): void {
-  const { navigate, currentPath } = requireDeps();
-  clearLocalSession();
-  navigate(loginPathFor(currentPath()), { replace: true, state: { notice: 'session-expired' } });
-}
-
-function onMessage(event: MessageEvent<AuthMessage>): void {
-  if (event.data.type === 'logout') {
+async function onMessage(message: AuthMessage): Promise<void> {
+  if (message.type === 'logout') {
     const wasSignedIn = useSessionStore.getState().status === 'authenticated';
-    clearLocalSession();
-    if (wasSignedIn) requireDeps().navigate('/', { replace: true });
-  } else {
-    void refreshAccessToken().catch(() => {
-      // Another tab signed in while this one is offline; the next request retries.
-    });
+    clearLocalSession('logout');
+    if (wasSignedIn) await requireDeps().navigate('/', { replace: true });
+    return;
   }
+  await refreshAccessToken().catch(() => {
+    // Another tab signed in while this one is offline; the next request retries.
+  });
 }
 
 /**
@@ -110,15 +114,17 @@ export function initSession(sessionDeps: SessionDeps): () => void {
   deps = sessionDeps;
   configureApiAuth({
     getAccessToken: () => useSessionStore.getState().accessToken,
+    // A refused refresh ends the session with endedBy 'expired'; RequireAuth takes it from there.
     refresh: refreshAccessToken,
-    onSessionExpired: sessionExpired,
   });
   if ('BroadcastChannel' in window) {
     channel = new BroadcastChannel(CHANNEL);
-    channel.addEventListener('message', onMessage);
+    channel.addEventListener('message', (event: MessageEvent<AuthMessage>) => {
+      void onMessage(event.data);
+    });
   }
   refreshAccessToken().catch(() => {
-    useSessionStore.setState({ status: 'anonymous', accessToken: null });
+    useSessionStore.setState({ status: 'anonymous', accessToken: null, endedBy: null });
   });
   return () => {
     clearTimeout(refreshTimer);

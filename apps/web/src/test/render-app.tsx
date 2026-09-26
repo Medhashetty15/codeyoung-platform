@@ -16,8 +16,7 @@ export function renderApp(path: string, { session = false }: { session?: boolean
   const stop = session
     ? initSession({
         queryClient,
-        navigate: (to, options) => void router.navigate(to, options),
-        currentPath: () => `${router.state.location.pathname}${router.state.location.search}`,
+        navigate: (to, options) => router.navigate(to, options),
       })
     : () => {};
   const view = render(

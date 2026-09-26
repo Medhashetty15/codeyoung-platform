@@ -2,15 +2,24 @@ import type { ReactNode } from 'react';
 import { Navigate, Outlet, useLocation, useSearchParams } from 'react-router';
 
 import { loginPathFor, sanitizeReturnTo } from './return-to';
-import { useSessionStatus } from './session-store';
+import { useSessionStatus, useSessionStore } from './session-store';
 
 /** Protected routes: skeleton while the boot refresh settles, login with returnTo when anonymous. */
 export function RequireAuth({ fallback }: { fallback: ReactNode }) {
   const status = useSessionStatus();
+  const endedBy = useSessionStore((state) => state.endedBy);
   const location = useLocation();
   if (status === 'unknown') return fallback;
   if (status === 'anonymous') {
-    return <Navigate to={loginPathFor(`${location.pathname}${location.search}`)} replace />;
+    // Logging out navigates home by itself; redirecting to login here would race it.
+    if (endedBy === 'logout') return null;
+    return (
+      <Navigate
+        to={loginPathFor(`${location.pathname}${location.search}`)}
+        replace
+        state={endedBy === 'expired' ? { notice: 'session-expired' } : undefined}
+      />
+    );
   }
   return <Outlet />;
 }
