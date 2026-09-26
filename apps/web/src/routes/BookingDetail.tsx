@@ -1,10 +1,11 @@
-import { useParams, useSearchParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 
-import { formatDate, formatTime, zoneParts } from '@app/time';
+import type { Booking } from '@app/contracts';
+import { formatDate, formatDateTime, formatTime, zoneParts } from '@app/time';
 
 import { useMe } from '../features/auth';
 import { useBooking } from '../features/booking';
-import { BeforeTheClass, BookingDetails, CalendarMenu } from '../features/my-bookings';
+import { BeforeTheClass, BookingDetails, CalendarMenu, ManageTrial } from '../features/my-bookings';
 import { useDisplayZone } from '../features/timezone';
 import { isApiError } from '../shared/api/ApiError';
 import { unreachableText } from '../shared/api/error-copy';
@@ -17,12 +18,28 @@ import { Notice } from '../shared/ui/Notice';
 import { notify } from '../shared/ui/notify';
 import { PageTitle } from '../shared/ui/PageTitle';
 import { Skeleton } from '../shared/ui/Skeleton';
+import { textLinkClassName } from '../shared/ui/text-link';
 
-/** /bookings/:id, with the confirmation hero when `?new=1` (doc 05 §6.1). Cancel and reschedule: FE-06. */
+/** A moved trial links to the booking it became (doc 05 §6.3). */
+function MovedTo({ booking, zone, locale }: { booking: Booking; zone: string; locale: string }) {
+  const next = useBooking(booking.rescheduledToId);
+  if (!booking.rescheduledToId) return null;
+  return (
+    <Link to={`/bookings/${booking.rescheduledToId}`} className={textLinkClassName}>
+      {next.data ? `Moved to ${formatDateTime(next.data.start, zone, locale)}` : 'See the new time'}
+    </Link>
+  );
+}
+
+/**
+ * /bookings/:id (doc 05 §6.3), with the confirmation hero when `?new=1` (§6.1) and a notice when
+ * `?moved=1`. Cancelled, moved and completed trials are read-only.
+ */
 export function Component() {
   const { id = '' } = useParams();
   const [searchParams] = useSearchParams();
   const isNew = searchParams.get('new') === '1';
+  const isMoved = searchParams.get('moved') === '1';
   const booking = useBooking(id);
   const { data: me } = useMe();
   const { zone, locale } = useDisplayZone();
@@ -85,9 +102,27 @@ export function Component() {
           </div>
         </header>
       ) : (
-        <header className="flex flex-col gap-2">
-          <PageTitle>{trial.student.firstName}&apos;s trial</PageTitle>
-          <p className="text-body text-ink-muted tabular-nums">{when}</p>
+        <header className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <PageTitle>{trial.student.firstName}&apos;s trial</PageTitle>
+            <p className="text-body text-ink-muted tabular-nums">{when}</p>
+          </div>
+          {isMoved && trial.status === 'CONFIRMED' && (
+            <Notice role="status" className="max-w-2xl">
+              Your trial has moved to {formatDateTime(trial.start, zone, locale)}.
+            </Notice>
+          )}
+          {trial.status === 'RESCHEDULED' && (
+            <MovedTo booking={trial} zone={zone} locale={locale} />
+          )}
+          {trial.status === 'CANCELLED' && (
+            <p className="text-body text-ink-muted">
+              This trial was cancelled.{' '}
+              <Link to="/book" className={textLinkClassName}>
+                Book another time
+              </Link>
+            </p>
+          )}
         </header>
       )}
 
@@ -109,7 +144,12 @@ export function Component() {
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <BookingDetails booking={trial} />
-        {trial.status === 'CONFIRMED' && <BeforeTheClass />}
+        {trial.status === 'CONFIRMED' && (
+          <div className="flex flex-col gap-10">
+            <BeforeTheClass />
+            <ManageTrial booking={trial} />
+          </div>
+        )}
       </div>
     </div>
   );

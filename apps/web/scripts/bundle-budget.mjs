@@ -8,7 +8,14 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 const BUDGET_KB = 180;
-const ROUTES = ['src/routes/Landing.tsx', 'src/routes/Book.tsx', 'src/routes/BookConfirm.tsx'];
+const ROUTES = [
+  'src/routes/Landing.tsx',
+  'src/routes/Book.tsx',
+  'src/routes/BookConfirm.tsx',
+  'src/routes/Bookings.tsx',
+  'src/routes/BookingDetail.tsx',
+  'src/routes/Reschedule.tsx',
+];
 
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 const manifest = JSON.parse(readFileSync(`${dist}.vite/manifest.json`, 'utf8'));

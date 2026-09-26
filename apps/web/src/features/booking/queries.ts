@@ -25,14 +25,16 @@ export function useStudents() {
   });
 }
 
-export function useBooking(id: string) {
+/** GET /bookings/:id; `null` waits (e.g. for the id of the booking a trial moved to). */
+export function useBooking(id: string | null) {
   return useQuery({
-    queryKey: qk.booking(id),
+    queryKey: qk.booking(id ?? ''),
     queryFn: ({ signal }) =>
-      api<Booking>(`/bookings/${encodeURIComponent(id)}`, {
+      api<Booking>(`/bookings/${encodeURIComponent(id ?? '')}`, {
         signal,
         schema: import.meta.env.DEV ? BookingSchema : undefined,
       }),
+    enabled: id !== null,
   });
 }
 
