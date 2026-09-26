@@ -38,6 +38,10 @@ curl localhost:3000/api/v1/health/ready    # {"status":"ok",...}
 - Demo parent login: `hannah.okafor@example.com` / `violet-harbour-lantern` (children Leo 9 and
   Maya 12; override the password with `SEED_DEMO_PASSWORD`).
 - Ops CLI: `npm run cli -- --help` (builds, then runs), e.g. `npm run cli -- config:print`.
+  A mentor is ill: `npm run cli -- booking:list` (today, IST), then
+  `npm run cli -- booking:reassign CY-XXXXXX`, or when nobody is free
+  `npm run cli -- booking:cancel CY-XXXXXX --reason "Mentor ill"`; everyone is emailed. Failed
+  emails: `outbox:list`, `outbox:retry <id>`. Waitlist: `waitlist:list`, `waitlist:mark <id> CONTACTED`.
 
 `docker compose` uses the project name `codeyoung`, so every worktree on a machine shares one
 PostgreSQL and one Mailpit. The init script creates `codeyoung_dev` (backend, API on 3000),

@@ -36,6 +36,9 @@ const CAP_PADDING_HOURS = 48;
  * slot engine, groups slots by the requester's local date. Mentor identities
  * never leave the server.
  */
+/** Whose booking rules apply: a parent's (lead time, horizon) or ops' (until the start). */
+export type BookingWindow = 'parent' | 'ops';
+
 @Injectable()
 export class AvailabilityService {
   constructor(
@@ -107,11 +110,15 @@ export class AvailabilityService {
    * Mentors the engine considers free for a slot starting at `start`, in
    * engine order. `excludeBookingId` ignores a booking being rescheduled.
    */
-  async candidates(start: Temporal.Instant, excludeBookingId?: string): Promise<string[]> {
+  async candidates(
+    start: Temporal.Instant,
+    excludeBookingId?: string,
+    window: BookingWindow = 'parent',
+  ): Promise<string[]> {
     const computation = await this.compute(
       start,
       start.add({ milliseconds: 1 }),
-      this.clock.now(),
+      this.nowFor(start, window),
       {
         excludeBookingId,
       },
@@ -128,11 +135,12 @@ export class AvailabilityService {
     mentorId: string,
     start: Temporal.Instant,
     excludeBookingId?: string,
+    window: BookingWindow = 'parent',
   ): Promise<boolean> {
     const computation = await this.compute(
       start,
       start.add({ milliseconds: 1 }),
-      this.clock.now(),
+      this.nowFor(start, window),
       {
         manager,
         mentorIds: [mentorId],
@@ -169,6 +177,16 @@ export class AvailabilityService {
       .slice(0, count)
       .sort((a, b) => a.epochMilliseconds - b.epochMilliseconds)
       .map((start) => this.toSlot(start));
+  }
+
+  /**
+   * The engine's "now". Ops moving an existing class (reassign) may do so up
+   * to its start, so lead time and horizon do not apply: evaluate the slot as
+   * if it were exactly the lead time away.
+   */
+  private nowFor(start: Temporal.Instant, window: BookingWindow): Temporal.Instant {
+    if (window === 'parent') return this.clock.now();
+    return start.subtract({ minutes: this.config.booking.leadTimeMinutes });
   }
 
   private async compute(

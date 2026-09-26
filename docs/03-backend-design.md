@@ -605,7 +605,7 @@ used by the API for validation and by the web app for parsing); fixture builders
 | Method | Path | Notes |
 |--------|------|-------|
 | GET | `/classroom/:joinToken` | `{role, status (BookingStatus), start, end, childFirstName, mentorFirstName, parentFirstName, timezone, serverTime, classroomOpensMinutesBefore}` (PD-16). |
-| POST | `/waitlist` | `{fullName, email, timezone, preferredTimes?}` → `201`; duplicates → `200` (idempotent). Links `user_id` if a valid bearer token is present. |
+| POST | `/waitlist` | `{fullName, email, timezone, preferredTimes?}` → `201 {id, status: OPEN, createdAt}`; an open entry for the same email (any case) → `200` with that entry, also under concurrent requests (partial unique index). Links `user_id` if a valid bearer token is present; an invalid token is ignored on public routes. 5/hour per IP. |
 | GET | `/health/live`, `/health/ready` | Liveness / DB readiness. |
 
 ### Examples
@@ -709,6 +709,21 @@ used by the API for validation and by the web app for parsing); fixture builders
 
 All commands print a dry-run summary and ask for confirmation on writes (`--yes` to skip in scripts).
 Actor recorded in `booking_events` as `ops:<os-user>`.
+
+Behaviour of the booking and outbox commands:
+
+- `booking:list` takes days in the mentor display zone (`MENTOR_DISPLAY_TIMEZONE`, default today) and
+  prints each class in that zone with the family's time and zone alongside.
+- `booking:reassign` works until the class starts: the parents' lead time and horizon do not apply,
+  but availability, time off, buffer and the daily cap do, checked under the new mentor's lock as in
+  §5.1 (the exclusion constraint stays the final guard). The preview lists the free mentors, best
+  first. When nobody else is free it says so, changes nothing and exits 1; ops then cancels.
+- `booking:cancel` requires `--reason`; the reason stays in the audit trail and is not put in the
+  family's email, which apologises and links to `/book`.
+- `outbox:retry` only touches `DEAD` messages and gives them a fresh set of attempts, due now. A
+  retried password reset has no token any more (scrubbed) and goes straight back to `DEAD`; the
+  parent asks for a new link.
+- `waitlist:list` shows `OPEN` entries by default (`--status all` for every entry).
 
 ## 11. Configuration (validated with zod at boot)
 

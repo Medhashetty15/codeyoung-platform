@@ -1,0 +1,4 @@
+# Handlebars email templates: Prettier would reflow the plain-text versions.
+src/modules/notifications/templates
+dist
+coverage
