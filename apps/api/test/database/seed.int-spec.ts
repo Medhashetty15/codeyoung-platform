@@ -194,7 +194,11 @@ describe('DatabaseSeeder', () => {
   });
 
   it('refuses to run against production', async () => {
-    const seeder = new DatabaseSeeder(db, hasher, config({ NODE_ENV: 'production' }));
+    const seeder = new DatabaseSeeder(
+      db,
+      hasher,
+      config({ NODE_ENV: 'production', SMTP_URL: 'smtp://mail.example.com:587' }),
+    );
 
     await expect(seeder.seed({ reset: false })).rejects.toBeInstanceOf(SeedRefusedError);
   });

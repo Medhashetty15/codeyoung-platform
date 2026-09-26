@@ -250,7 +250,9 @@ describe('production mode', () => {
   let app: NestExpressApplication;
 
   beforeAll(async () => {
-    app = await createTestApp({ env: { NODE_ENV: 'production' } });
+    app = await createTestApp({
+      env: { NODE_ENV: 'production', SMTP_URL: 'smtp://mail.example.com:587' },
+    });
   });
 
   afterAll(async () => {
