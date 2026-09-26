@@ -26,7 +26,7 @@ Library picks follow the curated `pick-ui-library` list; nothing is added withou
 | Forms | React Hook Form + zod resolver | Schemas from `@app/contracts`, identical to server validation. |
 | Styling | Tailwind CSS v4 (Vite plugin) + CSS variables from doc 07 | Tokens in one place, both themes. |
 | Primitives | **Base UI** (verify package name at install, `@base-ui/react`) | Unstyled, accessible dialogs, popovers, menus, combobox, tabs, accordion; exposes `data-starting-style` / `--transform-origin` for correct motion. |
-| Variants | cva + clsx + tailwind-merge | Typed component variants, clean conditional classes. |
+| Variants | cva + clsx | Typed component variants, clean conditional classes. No tailwind-merge (bundle size): variants go through props, `className` only adds layout. |
 | Toasts | Sonner (headless `toast.custom`) | One `<Toaster />`, wrapped in our `notify()` API. |
 | Icons | Phosphor (`@phosphor-icons/core` SVGs, generated components) | One family, regular weight only; the React package ships all six weights per icon. |
 | Countdown | NumberFlow (`@number-flow/react`) | Proper digit transitions, reduced-motion aware. |
