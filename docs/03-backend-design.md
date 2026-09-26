@@ -768,6 +768,7 @@ address and drops unsent account emails. Booking rows stay for mentor history.
 | `PASSWORD_RESET_TTL_MIN` | 30 | |
 | `LOGIN_LOCK_THRESHOLD` / `LOGIN_LOCK_MINUTES` | 10 / 15 | Lockout |
 | `COOKIE_SECURE` | `true` | Secure flag on `cy_rt`; must be `true` in production, `false` for local http (WebKit drops Secure cookies, PD-10) |
+| `ALLOW_INSECURE_COOKIE` | `false` | Lets production mode run with `COOKIE_SECURE=false`; only for the local http Docker demo (runbook §2), the API logs a warning |
 | `TRIAL_DURATION_MIN` | 60 | |
 | `SLOT_GRID_MIN` | 30 | |
 | `MENTOR_BUFFER_MIN` | 15 | |

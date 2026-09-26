@@ -16,8 +16,10 @@ x-app-env: &app-env
   # Caddy (web) is the one proxy in front of the API.
   TRUST_PROXY_HOPS: '1'
   LOG_LEVEL: info
-  # Browsers treat http://localhost as secure, so Secure cookies work (Safari excepted).
-  COOKIE_SECURE: 'true'
+  # Local http demo: Safari drops Secure cookies over plain http, so the refresh cookie is not
+  # Secure here. Set COOKIE_SECURE=true (and drop the opt-in) behind TLS.
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  ALLOW_INSECURE_COOKIE: 'true'
 
 services:
   postgres:

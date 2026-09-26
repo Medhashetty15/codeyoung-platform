@@ -15,7 +15,13 @@ runEntry('api', async () => {
   app.useLogger(logger);
   configureHttpApp(app);
 
-  const { port } = app.get(AppConfig);
-  await app.listen(port);
-  logger.log(`API listening on port ${port}`, 'Bootstrap');
+  const config = app.get(AppConfig);
+  await app.listen(config.port);
+  logger.log(`API listening on port ${config.port}`, 'Bootstrap');
+  if (config.isProduction && !config.auth.cookieSecure) {
+    logger.warn(
+      'Refresh cookie is not Secure (ALLOW_INSECURE_COOKIE): local http only',
+      'Bootstrap',
+    );
+  }
 });
