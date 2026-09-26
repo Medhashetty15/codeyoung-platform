@@ -731,7 +731,8 @@ is applied, then every upcoming confirmed class the new schedule no longer holds
 time off, buffer; deactivation strands them all; a lower cap only limits future bookings) is
 listed. Without `--reassign` the change is refused and nothing is written; with it, each class moves
 to the least-loaded free mentor (as `booking:reassign`) in the same transaction, all or nothing:
-one class without cover rolls everything back and names it so ops can cancel it first. The preview
+if any class has no cover, nothing changes and every such class is named (FR-O3) so ops can cancel
+them first. The preview
 is the same change run and rolled back. `mentor:availability:set` reads
 `[{"weekday": "Mon" | 1, "start": "19:00", "end": "23:00"}]` (mentor wall times; an end before the
 start crosses midnight), ends the current rules the day before `--from` and previews each window's

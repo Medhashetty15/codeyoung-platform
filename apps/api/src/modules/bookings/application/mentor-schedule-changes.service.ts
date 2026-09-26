@@ -38,6 +38,8 @@ export interface ChangeOutcome<T> {
   value: T;
   /** Classes the change strands; moved to other mentors when the change was applied. */
   affected: BookingRecord[];
+  /** With `reassign`: stranded classes no other mentor is free for. */
+  uncovered: BookingRecord[];
   moved: { reference: string; mentorId: string }[];
 }
 
@@ -132,7 +134,17 @@ export class MentorScheduleChanges {
         await this.mentors.withManager(manager).lockById(mentor.id);
         const value = await apply(manager, mentor);
         const affected = await this.stranded(manager, mentor.id, affectedBy);
-        const outcome: ChangeOutcome<T> = { mentor, value, affected, moved: [] };
+        // Every class nobody can cover is reported at once, not just the first (FR-O3).
+        const plans = [];
+        if (options.reassign) {
+          for (const booking of affected) {
+            plans.push({ booking, cover: await this.reassigner.rankedCover(booking) });
+          }
+        }
+        const uncovered = plans
+          .filter((plan) => plan.cover.length === 0)
+          .map((plan) => plan.booking);
+        const outcome: ChangeOutcome<T> = { mentor, value, affected, uncovered, moved: [] };
         if (options.dryRun === true) throw new DryRun(outcome);
         if (affected.length === 0) return outcome;
         if (!options.reassign) {
@@ -141,20 +153,16 @@ export class MentorScheduleChanges {
               'them to other mentors, or cancel them first (booking:cancel).',
           );
         }
-        for (const booking of affected) {
-          const cover = await this.reassigner.rankedCover(booking);
+        if (uncovered.length > 0) throw noCover(uncovered);
+        for (const { booking, cover } of plans) {
           const moved = await this.reassigner.moveWithin(
             manager,
             booking.reference,
             cover,
             options.actor,
           );
-          if (moved === null) {
-            throw new ScheduleConflictError(
-              `No other mentor is free for ${booking.reference}; nothing was changed. ` +
-                `Cancel it first: booking:cancel ${booking.reference} --reason "<why>"`,
-            );
-          }
+          // Taken meanwhile, or the cover's day filled up with earlier moves.
+          if (moved === null) throw noCover([booking]);
           outcome.moved.push({ reference: booking.reference, mentorId: moved.booking.mentorId });
         }
         return outcome;
@@ -181,6 +189,14 @@ export class MentorScheduleChanges {
     }
     return stranded;
   }
+}
+
+function noCover(bookings: readonly BookingRecord[]): ScheduleConflictError {
+  const references = bookings.map((booking) => booking.reference);
+  return new ScheduleConflictError(
+    `No other mentor is free for ${references.join(', ')}; nothing was changed. Cancel ` +
+      `${references.length === 1 ? 'it' : 'them'} first: booking:cancel <reference> --reason "<why>"`,
+  );
 }
 
 function describe(bookings: readonly BookingRecord[]): string {
