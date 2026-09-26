@@ -31,6 +31,6 @@ describe('dstNoticeText', () => {
       offsetBefore: '+11:00',
       offsetAfter: '+10:30',
     };
-    expect(dstNoticeText(transition, 'Australia/Lord_Howe', 'en-AU')).not.toMatch(/[–—]/);
+    expect(dstNoticeText(transition, 'Australia/Lord_Howe', 'en-AU')).not.toMatch(/[\u2013\u2014]/);
   });
 });
