@@ -2,6 +2,8 @@ import { type EntityManager, In } from 'typeorm';
 
 import { fromDate, type Temporal, toDate } from '@app/time';
 
+import { firstName } from '../../../common/text/first-name';
+
 import { MentorEntity } from './mentor.entity';
 
 export interface LockedMentor {
@@ -70,8 +72,4 @@ export class MentorsRepository {
     });
     return new Map(rows.map((row) => [row.id, firstName(row.fullName)]));
   }
-}
-
-export function firstName(fullName: string): string {
-  return fullName.trim().split(/\s+/)[0] ?? fullName;
 }

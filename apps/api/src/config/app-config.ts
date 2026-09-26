@@ -49,6 +49,12 @@ export const envSchema = z
     CLASSROOM_OPENS_MIN_BEFORE: z.coerce.number().int().min(0).max(120).default(10),
     /** Zone the UI shows for mentors, e.g. "Your mentor: Sat 9:30 PM India time" (PD-03). */
     MENTOR_DISPLAY_TIMEZONE: IanaZoneSchema.default(canonicalZone('Asia/Kolkata')),
+    /** SMTP server for outgoing email; local default is Mailpit (docker-compose). */
+    SMTP_URL: z.url({ protocol: /^smtps?$/ }).optional(),
+    /** Sender of every email and ORGANIZER of calendar invites. */
+    MAIL_FROM: z.string().trim().min(3).default('Codeyoung <trials@codeyoung.dev>'),
+    OUTBOX_POLL_MS: z.coerce.number().int().min(100).max(60_000).default(2000),
+    OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(8),
     /** Password of the seeded demo parent (`db:seed`); never used in production. */
     SEED_DEMO_PASSWORD: z.string().min(8).max(128).optional(),
   })
@@ -59,6 +65,14 @@ export const envSchema = z
   .refine((env) => env.NODE_ENV !== 'production' || env.COOKIE_SECURE, {
     path: ['COOKIE_SECURE'],
     message: 'must be true in production',
+  })
+  .refine((env) => env.NODE_ENV !== 'production' || env.SMTP_URL !== undefined, {
+    path: ['SMTP_URL'],
+    message: 'is required in production',
+  })
+  .refine((env) => parseMailbox(env.MAIL_FROM) !== null, {
+    path: ['MAIL_FROM'],
+    message: 'must be an address, optionally with a name: "Name <address@example.com>"',
   })
   .refine((env) => env.REFRESH_TTL_DAYS <= env.SESSION_MAX_DAYS, {
     path: ['REFRESH_TTL_DAYS'],
@@ -75,6 +89,21 @@ export const envSchema = z
   });
 
 export type Env = z.infer<typeof envSchema>;
+
+export interface Mailbox {
+  name: string;
+  email: string;
+}
+
+const MAILBOX = /^(?:"?([^"<>]*?)"?\s*<([^<>\s]+@[^<>\s]+)>|([^<>\s]+@[^<>\s]+))$/;
+
+/** `Codeyoung <trials@codeyoung.dev>` -> name and address; null when it is not one. */
+export function parseMailbox(value: string): Mailbox | null {
+  const match = MAILBOX.exec(value.trim());
+  if (match === null) return null;
+  const email = match[2] ?? match[3] ?? '';
+  return { name: (match[1] ?? '').trim(), email };
+}
 export type LogLevel = (typeof LOG_LEVELS)[number];
 
 export class ConfigValidationError extends Error {
@@ -97,6 +126,14 @@ export class AppConfig {
   readonly trustProxyHops: number;
   readonly rateLimitMultiplier: number;
   readonly seedDemoPassword: string | undefined;
+  readonly mail: {
+    readonly smtpUrl: string;
+    readonly from: Mailbox;
+  };
+  readonly outbox: {
+    readonly pollMs: number;
+    readonly maxAttempts: number;
+  };
   /** Business knobs of booking (docs/03 §11); exposed at /meta/booking-config. */
   readonly booking: {
     readonly trialDurationMinutes: number;
@@ -132,6 +169,11 @@ export class AppConfig {
     this.trustProxyHops = env.TRUST_PROXY_HOPS;
     this.rateLimitMultiplier = env.RATE_LIMIT_MULTIPLIER;
     this.seedDemoPassword = env.SEED_DEMO_PASSWORD;
+    this.mail = {
+      smtpUrl: env.SMTP_URL ?? 'smtp://localhost:1025',
+      from: parseMailbox(env.MAIL_FROM) ?? { name: '', email: env.MAIL_FROM },
+    };
+    this.outbox = { pollMs: env.OUTBOX_POLL_MS, maxAttempts: env.OUTBOX_MAX_ATTEMPTS };
     this.booking = {
       trialDurationMinutes: env.TRIAL_DURATION_MIN,
       slotGridMinutes: env.SLOT_GRID_MIN,
@@ -191,6 +233,14 @@ export class AppConfig {
       rateLimitMultiplier: this.rateLimitMultiplier,
       accessTokenTtlSeconds: this.auth.accessTtlSeconds,
       cookieSecure: this.auth.cookieSecure,
+      smtp: redactUrlPassword(this.mail.smtpUrl),
+      mailFrom: this.mail.from.email,
     };
   }
+}
+
+function redactUrlPassword(value: string): string {
+  const url = new URL(value);
+  if (url.password !== '') url.password = '***';
+  return url.toString();
 }

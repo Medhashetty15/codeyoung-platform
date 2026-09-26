@@ -7,3 +7,4 @@ package-lock.json
 *.tsbuildinfo
 docs
 apps/web/public/mockServiceWorker.js
+apps/api/src/modules/notifications/templates

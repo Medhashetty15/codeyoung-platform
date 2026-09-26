@@ -12,6 +12,12 @@
     },
     "typeCheck": false,
     "deleteOutDir": true,
-    "tsConfigPath": "tsconfig.build.json"
+    "tsConfigPath": "tsconfig.build.json",
+    "assets": [
+      {
+        "include": "modules/notifications/templates/*.hbs",
+        "watchAssets": true
+      }
+    ]
   }
 }

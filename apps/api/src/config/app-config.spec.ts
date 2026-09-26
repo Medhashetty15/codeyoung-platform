@@ -85,8 +85,12 @@ describe('AppConfig.fromEnv', () => {
       AppConfig.fromEnv({ ...BASE, NODE_ENV: 'production', RATE_LIMIT_MULTIPLIER: '10' }),
     ).toThrow(/RATE_LIMIT_MULTIPLIER/);
     expect(
-      AppConfig.fromEnv({ ...BASE, NODE_ENV: 'production', RATE_LIMIT_MULTIPLIER: '1' })
-        .isProduction,
+      AppConfig.fromEnv({
+        ...BASE,
+        NODE_ENV: 'production',
+        RATE_LIMIT_MULTIPLIER: '1',
+        SMTP_URL: 'smtp://mail.example.com:587',
+      }).isProduction,
     ).toBe(true);
   });
 
@@ -160,6 +164,35 @@ describe('AppConfig.fromEnv', () => {
     ).toThrow(/REFRESH_TTL_DAYS/);
   });
 
+  it('applies the documented mail and outbox defaults', () => {
+    const config = AppConfig.fromEnv({ ...BASE });
+
+    expect(config.mail).toEqual({
+      smtpUrl: 'smtp://localhost:1025',
+      from: { name: 'Codeyoung', email: 'trials@codeyoung.dev' },
+    });
+    expect(config.outbox).toEqual({ pollMs: 2000, maxAttempts: 8 });
+  });
+
+  it('accepts a bare sender address and rejects a malformed one', () => {
+    expect(AppConfig.fromEnv({ ...BASE, MAIL_FROM: 'ops@example.com' }).mail.from).toEqual({
+      name: '',
+      email: 'ops@example.com',
+    });
+    expect(() => AppConfig.fromEnv({ ...BASE, MAIL_FROM: 'Codeyoung <nowhere>' })).toThrow(
+      /MAIL_FROM/,
+    );
+  });
+
+  it('requires an explicit SMTP server in production', () => {
+    const production = { ...BASE, NODE_ENV: 'production' };
+
+    expect(() => AppConfig.fromEnv(production)).toThrow(/SMTP_URL/);
+    expect(
+      AppConfig.fromEnv({ ...production, SMTP_URL: 'smtps://mail.example.com:465' }).mail.smtpUrl,
+    ).toBe('smtps://mail.example.com:465');
+  });
+
   it('describes itself without the database password', () => {
     const description = JSON.stringify(AppConfig.fromEnv({ ...BASE }).describe());
 
@@ -167,5 +200,17 @@ describe('AppConfig.fromEnv', () => {
     expect(description).not.toContain('secret');
     expect(description).not.toContain('codeyoung:');
     expect(description).not.toContain(JWT_ACCESS_SECRET);
+  });
+
+  it('describes the SMTP server without its password', () => {
+    const description = JSON.stringify(
+      AppConfig.fromEnv({
+        ...BASE,
+        SMTP_URL: 'smtps://mailer:hunter22@mail.example.com:465',
+      }).describe(),
+    );
+
+    expect(description).toContain('mail.example.com');
+    expect(description).not.toContain('hunter22');
   });
 });

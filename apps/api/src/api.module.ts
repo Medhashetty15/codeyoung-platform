@@ -13,6 +13,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/http/jwt-auth.guard';
 import { AvailabilityModule } from './modules/availability/availability.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
+import { ClassroomModule } from './modules/classroom/classroom.module';
 import { HealthModule } from './modules/health/health.module';
 import { MentorsModule } from './modules/mentors/mentors.module';
 import { MetaModule } from './modules/meta/meta.module';
@@ -39,6 +40,7 @@ const DEFAULT_LIMIT_PER_MINUTE = 120;
     AuthModule,
     StudentsModule,
     BookingsModule,
+    ClassroomModule,
     MentorsModule,
     AvailabilityModule,
     MetaModule,

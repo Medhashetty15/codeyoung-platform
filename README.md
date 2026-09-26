@@ -31,7 +31,10 @@ curl localhost:3000/api/v1/health/ready    # {"status":"ok",...}
 ```
 
 - API: `http://localhost:3000/api/v1`, OpenAPI UI at `http://localhost:3000/api/docs` (not in production).
-- Mailpit UI: `http://localhost:8025`.
+- Mailpit UI: `http://localhost:8025`. The worker sends every email there locally: booking
+  confirmations, cancellations, reschedules and reminders to parent and mentor (each in their own
+  zone, with a calendar invite), and password emails.
+- Classroom page data: `GET /api/v1/classroom/<join token>` (the token from a booking's join link).
 - Demo parent login: `hannah.okafor@example.com` / `violet-harbour-lantern` (children Leo 9 and
   Maya 12; override the password with `SEED_DEMO_PASSWORD`).
 - Ops CLI: `npm run cli -- --help` (builds, then runs), e.g. `npm run cli -- config:print`.
@@ -64,7 +67,7 @@ npm run dev:web                          # http://localhost:5173, /api proxied t
 | `npm run format` / `format:check`                            | Prettier                                                                            |
 | `npm run typecheck`                                          | `tsc` for every workspace                                                           |
 | `npm test`                                                   | Unit tests in every workspace                                                       |
-| `npm run test:int`                                           | Integration tests (Testcontainers starts its own PostgreSQL 17)                     |
+| `npm run test:int`                                           | Integration tests; needs Docker (Testcontainers starts PostgreSQL 17 and Mailpit)   |
 | `npm run infra:up` / `infra:down`                            | Start / stop local PostgreSQL and Mailpit                                           |
 | `npm run db:migrate`                                         | Apply pending migrations                                                            |
 | `npm run db:revert`                                          | Undo the last migration (asks first; `-- --yes` in scripts)                         |
@@ -81,29 +84,46 @@ CI (`.github/workflows/ci.yml`) runs lint, format, typecheck, unit and integrati
 Validated with zod at boot; the process refuses to start on invalid values. See
 [`apps/api/.env.example`](apps/api/.env.example) for every key with its default.
 
-| Key                                                          | Default                  | Meaning                                                       |
-| ------------------------------------------------------------ | ------------------------ | ------------------------------------------------------------- |
-| `NODE_ENV`                                                   | `development`            | `development`, `test` or `production`                         |
-| `PORT`                                                       | `3000`                   | HTTP port                                                     |
-| `DATABASE_URL`                                               | (required)               | PostgreSQL connection string                                  |
-| `WEB_BASE_URL`                                               | `http://localhost:5173`  | Web app origin: email links and default CORS origin           |
-| `CORS_ORIGINS`                                               | web origin               | Comma-separated CORS allow-list                               |
-| `LOG_LEVEL`                                                  | `info`                   | Pino level (`silent` in tests)                                |
-| `LOG_PRETTY`                                                 | `true` in development    | Human-readable logs instead of JSON                           |
-| `TRUST_PROXY_HOPS`                                           | `0`                      | Reverse-proxy hops trusted for client IPs                     |
-| `RATE_LIMIT_MULTIPLIER`                                      | `1`                      | Scales every rate limit (e2e); must be `<= 1` in prod         |
-| `SEED_DEMO_PASSWORD`                                         | `violet-harbour-lantern` | Demo parent password for `db:seed` (never production)         |
-| `JWT_ACCESS_SECRET`                                          | (required)               | HS256 key for access tokens, at least 32 characters           |
-| `JWT_ACCESS_TTL_SEC`                                         | `900`                    | Access token lifetime                                         |
-| `REFRESH_TTL_DAYS` / `SESSION_MAX_DAYS`                      | `7` / `30`               | Refresh token lifetime / absolute session cap                 |
-| `REFRESH_REUSE_GRACE_SEC`                                    | `20`                     | Parallel-tab window before a reused token revokes the session |
-| `PASSWORD_RESET_TTL_MIN`                                     | `30`                     | Reset link lifetime                                           |
-| `LOGIN_LOCK_THRESHOLD` / `LOGIN_LOCK_MINUTES`                | `10` / `15`              | Failures per window before a temporary lock                   |
-| `COOKIE_SECURE`                                              | `true`                   | Secure refresh cookie; `false` only for local http            |
-| `TRIAL_DURATION_MIN` / `SLOT_GRID_MIN` / `MENTOR_BUFFER_MIN` | `60` / `30` / `15`       | Class length, UTC slot grid, changeover after each class      |
-| `BOOKING_LEAD_TIME_MIN` / `BOOKING_HORIZON_DAYS`             | `240` / `14`             | Bookable window, counted from the server clock                |
-| `RESCHEDULE_CUTOFF_MIN` / `DEFAULT_MAX_TRIALS_PER_DAY`       | `120` / `2`              | Reschedule cutoff, default mentor daily cap                   |
-| `CLASSROOM_OPENS_MIN_BEFORE` / `MENTOR_DISPLAY_TIMEZONE`     | `10` / `Asia/Kolkata`    | Classroom opening, mentor zone shown in the UI                |
+| Key                                                          | Default                            | Meaning                                                       |
+| ------------------------------------------------------------ | ---------------------------------- | ------------------------------------------------------------- |
+| `NODE_ENV`                                                   | `development`                      | `development`, `test` or `production`                         |
+| `PORT`                                                       | `3000`                             | HTTP port                                                     |
+| `DATABASE_URL`                                               | (required)                         | PostgreSQL connection string                                  |
+| `WEB_BASE_URL`                                               | `http://localhost:5173`            | Web app origin: email links and default CORS origin           |
+| `CORS_ORIGINS`                                               | web origin                         | Comma-separated CORS allow-list                               |
+| `LOG_LEVEL`                                                  | `info`                             | Pino level (`silent` in tests)                                |
+| `LOG_PRETTY`                                                 | `true` in development              | Human-readable logs instead of JSON                           |
+| `TRUST_PROXY_HOPS`                                           | `0`                                | Reverse-proxy hops trusted for client IPs                     |
+| `RATE_LIMIT_MULTIPLIER`                                      | `1`                                | Scales every rate limit (e2e); must be `<= 1` in prod         |
+| `SEED_DEMO_PASSWORD`                                         | `violet-harbour-lantern`           | Demo parent password for `db:seed` (never production)         |
+| `JWT_ACCESS_SECRET`                                          | (required)                         | HS256 key for access tokens, at least 32 characters           |
+| `JWT_ACCESS_TTL_SEC`                                         | `900`                              | Access token lifetime                                         |
+| `REFRESH_TTL_DAYS` / `SESSION_MAX_DAYS`                      | `7` / `30`                         | Refresh token lifetime / absolute session cap                 |
+| `REFRESH_REUSE_GRACE_SEC`                                    | `20`                               | Parallel-tab window before a reused token revokes the session |
+| `PASSWORD_RESET_TTL_MIN`                                     | `30`                               | Reset link lifetime                                           |
+| `LOGIN_LOCK_THRESHOLD` / `LOGIN_LOCK_MINUTES`                | `10` / `15`                        | Failures per window before a temporary lock                   |
+| `COOKIE_SECURE`                                              | `true`                             | Secure refresh cookie; `false` only for local http            |
+| `TRIAL_DURATION_MIN` / `SLOT_GRID_MIN` / `MENTOR_BUFFER_MIN` | `60` / `30` / `15`                 | Class length, UTC slot grid, changeover after each class      |
+| `BOOKING_LEAD_TIME_MIN` / `BOOKING_HORIZON_DAYS`             | `240` / `14`                       | Bookable window, counted from the server clock                |
+| `RESCHEDULE_CUTOFF_MIN` / `DEFAULT_MAX_TRIALS_PER_DAY`       | `120` / `2`                        | Reschedule cutoff, default mentor daily cap                   |
+| `CLASSROOM_OPENS_MIN_BEFORE` / `MENTOR_DISPLAY_TIMEZONE`     | `10` / `Asia/Kolkata`              | Classroom opening, mentor zone shown in the UI                |
+| `SMTP_URL`                                                   | `smtp://localhost:1025`            | Outgoing mail (Mailpit locally); required in production       |
+| `MAIL_FROM`                                                  | `Codeyoung <trials@codeyoung.dev>` | Sender and calendar invite organizer                          |
+| `OUTBOX_POLL_MS` / `OUTBOX_MAX_ATTEMPTS`                     | `2000` / `8`                       | Worker poll interval / attempts before a message is `DEAD`    |
+
+## Worker
+
+`apps/api/src/worker.ts` (`npm run dev` watches it; `npm run start:worker -w @app/api` after a
+build) runs the background jobs of docs/03 §7.1, each in its own loop that never overlaps itself:
+
+| Job                | Every | What                                                                       |
+| ------------------ | ----- | -------------------------------------------------------------------------- |
+| outbox-relay       | 2 s   | Claims due outbox rows (`SKIP LOCKED`), sends their emails once, backs off |
+| outbox-reaper      | 1 min | Requeues rows stuck in `PROCESSING` for 5 minutes (a worker died)          |
+| complete-bookings  | 5 min | Confirmed classes that ended over an hour ago become `COMPLETED`           |
+| credential-cleanup | 1 day | Deletes expired refresh and reset tokens and sessions expired over 30 days |
+
+Several workers can run at once. `SIGTERM` stops scheduling and waits for runs in progress.
 
 ## Conventions that CI enforces
 

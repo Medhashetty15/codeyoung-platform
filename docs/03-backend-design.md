@@ -36,7 +36,7 @@ bookings/
 | Entry | Bootstrap | Runs |
 |-------|-----------|------|
 | `src/main.ts` | `NestFactory.create(ApiModule)` | HTTP API |
-| `src/worker.ts` | `NestFactory.createApplicationContext(WorkerModule)` | Outbox relay, reaper, housekeeping (`@nestjs/schedule`, only in this process) |
+| `src/worker.ts` | `NestFactory.createApplicationContext(WorkerModule)` | Outbox relay, reaper, housekeeping (`JobScheduler`, only in this process) |
 | `src/cli.ts` | `CommandFactory.run(CliModule)` | Ops commands (`npm run cli -- <command>`) |
 
 ### Request pipeline
@@ -478,6 +478,15 @@ In-memory throttler storage for a single API instance; Redis/Postgres storage wh
 Backoff: `run_after = now + min(2^attempts, 60) min`; `attempts ≥ 8` → `DEAD`. Graceful shutdown finishes
 in-flight messages. Multiple worker replicas are safe.
 
+- Jobs run under a small `JobScheduler` (not `@nestjs/schedule`): each job has its own loop and the
+  next run is scheduled only after the current one ends, so a slow run never overlaps itself; on
+  `SIGTERM` it stops scheduling and waits for runs in progress before SMTP and the database close.
+- The relay claims a batch in one `UPDATE ... WHERE id IN (SELECT ... FOR UPDATE SKIP LOCKED)`, then
+  sends outside any transaction. Finishing a message is fenced on its `locked_at`, so a claim the
+  reaper took back is never overwritten. It keeps draining while batches come back full.
+- The reaper counts the lost run as an attempt, so a message that crashes every worker still ends `DEAD`.
+- All times (due check, backoff, reminders) come from the injected `Clock`.
+
 ### 7.2 Handling a message
 
 1. Load current state (booking, parent, mentor). For `BookingReminder`, skip if booking not
@@ -485,7 +494,17 @@ in-flight messages. Multiple worker replicas are safe.
 2. Build per-recipient emails, each rendered in the recipient's zone (parent: current profile zone; mentor: mentor zone).
 3. For each recipient: skip if an `email_deliveries` row for (message, template, recipient) has `sent_at`;
    otherwise send and record. Delivery is at-least-once (a crash between SMTP accept and the DB write can duplicate one email; accepted trade-off).
-4. Sensitive payload fields (password-reset token) are scrubbed from `payload` once `DONE`.
+4. Sensitive payload fields (password-reset token) are scrubbed from `payload` once `DONE` (or `DEAD`).
+
+Rules applied at send time:
+
+- Invitations to one booking (`BookingConfirmed`, `BookingReminder`, the parent and new-mentor parts
+  of `BookingReassigned`) are dropped when the class is no longer `CONFIRMED`; the email that explains
+  why is its own message. Reminders are also dropped when the start moved or already passed.
+  Cancellations and moves always go out.
+- A reset link that expired before the worker got to it is not sent.
+- A message that can never succeed (unknown type, missing rows, bad payload) is `DEAD` at once.
+- `last_error` keeps at most 1000 characters with email addresses masked (SMTP replies quote them).
 
 ### 7.3 Templates
 
@@ -504,8 +523,19 @@ Handlebars (HTML + plain text), shared layout, CSS inlined (`juice`). Time strin
 | `booking-reminder-parent` / `-mentor` | both | — |
 | `password-reset`, `password-changed` | parent | — |
 
-`.ics`: `UID = <booking id>@codeyoung`, `DTSTART/DTEND` in UTC, `SEQUENCE = ics_sequence`, organiser = `MAIL_FROM`.
-Rescheduled bookings get a new UID (new booking); the old UID is cancelled.
+`.ics`: `UID = <booking id>@codeyoung`, `DTSTART/DTEND` in UTC, `SEQUENCE = ics_sequence`, organiser = `MAIL_FROM`,
+the recipient as attendee. The invitation is sent as a `text/calendar; method=...` alternative (what
+mail clients act on) and as an attachment. Rescheduled bookings get a new UID (new booking); the old
+UID is cancelled: the parent's email carries the new invitation plus a `CANCEL` for the old event.
+
+Templates live in `apps/api/src/modules/notifications/templates` (`<name>.html.hbs`, `<name>.txt.hbs`,
+one shared layout); subjects are in `mail/email-templates.ts`. They compile once at startup in
+strict mode, so a missing value fails the send (and retries) rather than mailing a blank. Every
+email carries the booking reference; parent emails link the classroom (personal link) and the
+manage page, mentor emails give the family's time as "For the family it is 5:00 to 6:00 PM London
+time (GMT+1)." Reminders name the day by calendar days in the recipient's zone ("today",
+"tomorrow", "on Monday 26 October"), which stays right across DST changes. A unit test renders
+every template and fails on any en or em dash.
 
 ### 7.4 Transport
 
@@ -689,7 +719,7 @@ Actor recorded in `booking_events` as `ops:<os-user>`.
 | `DATABASE_URL` | — | Postgres |
 | `WEB_BASE_URL` | `http://localhost:5173` | Links in emails, default CORS origin |
 | `CORS_ORIGINS` | web origin | Comma-separated CORS allow-list |
-| `SMTP_URL`, `MAIL_FROM` | Mailpit / `Codeyoung <trials@codeyoung.dev>` | Mail |
+| `SMTP_URL`, `MAIL_FROM` | `smtp://localhost:1025` (Mailpit) / `Codeyoung <trials@codeyoung.dev>` | Mail; `SMTP_URL` is required in production, `MAIL_FROM` must be an address with an optional name |
 | `JWT_ACCESS_SECRET` | — (≥ 32 characters) | HS256 key |
 | `JWT_ACCESS_TTL_SEC` | 900 | 15 min |
 | `REFRESH_TTL_DAYS` | 7 | Per token |
@@ -721,6 +751,6 @@ Actor recorded in `booking_events` as `ops:<os-user>`.
 | Unit | Vitest | `@app/time` DST fixtures; slot engine; assignment ranking; state machine; password policy; token utils. Injected clock everywhere. |
 | Integration | Vitest + Testcontainers (Postgres 17) | Migrations on empty DB + drift check; constraints; repositories; **race test**: N parallel bookings on one slot with k free mentors → exactly k succeed, cap and overlap never violated; reschedule/reassign under contention. |
 | API e2e | Supertest on a booted app | Every endpoint's happy path + documented error codes; auth flows incl. refresh rotation, reuse detection, grace window, lockout, password change/reset revoking other sessions; ownership (404). |
-| Worker | Integration | Backoff, dead letter, reaper, reminder suppression, dedupe, payload scrubbing; email content asserted via Mailpit API (times in the right zones). |
+| Worker | Integration | Backoff, dead letter, reaper, reminder suppression, dedupe, payload scrubbing; email content asserted via Mailpit API (times in the right zones). Testcontainers starts Mailpit next to PostgreSQL; job loops are off in tests and each job is driven directly with a manual clock. |
 | CLI | Integration | Reassign/time-off flows and their emails. |
 | Guard rails | CI matrix `TZ=UTC` / `TZ=America/New_York`; ESLint bans unsafe date APIs; coverage ≥ 90 % on domain + time. |

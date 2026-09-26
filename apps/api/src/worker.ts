@@ -13,11 +13,8 @@ runEntry('worker', async () => {
   });
   const logger = app.get(Logger);
   app.useLogger(logger);
+  // SIGTERM/SIGINT stop scheduling and wait for runs in progress (JobScheduler).
   app.enableShutdownHooks();
-
-  // Holds the event loop open until SIGTERM/SIGINT (handled by the shutdown hooks).
-  // Scheduled jobs (BE-07) keep the process alive themselves and replace this timer.
-  setInterval(() => undefined, 60_000);
 
   await app.init();
   logger.log('Worker started', 'Bootstrap');
