@@ -65,6 +65,11 @@ export class TestParent {
     this.accessToken = AuthResponseSchema.parse(response.body).accessToken;
   }
 
+  /** The bearer token, for requests the helpers do not cover. */
+  get bearerToken(): string {
+    return this.accessToken;
+  }
+
   get(path: string) {
     return api(this.app).get(`/api/v1${path}`).set('Authorization', `Bearer ${this.accessToken}`);
   }

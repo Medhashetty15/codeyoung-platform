@@ -14,7 +14,9 @@ const BEARER = /^Bearer ([A-Za-z0-9._~+/-]+=*)$/;
 
 /**
  * Global guard: every route needs a valid access token unless marked
- * `@Public()` (docs/03 §6.4). Verification is stateless (no database hit).
+ * `@Public()` (docs/03 §6.4). A public route still sees the user when a valid
+ * token is sent (the waitlist links the account), and ignores a bad one.
+ * Verification is stateless (no database hit).
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -25,13 +27,14 @@ export class JwtAuthGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const targets = [context.getHandler(), context.getClass()];
-    if (this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC, targets) === true) {
-      return true;
-    }
-
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = BEARER.exec(request.header('authorization') ?? '')?.[1];
     const user = token === undefined ? null : this.accessTokens.verify(token);
+    if (this.reflector.getAllAndOverride<boolean | undefined>(IS_PUBLIC, targets) === true) {
+      if (user !== null) request.user = user;
+      return true;
+    }
+
     if (user === null) {
       throw new AppError(ErrorCode.UNAUTHENTICATED, { detail: 'Log in to continue.' });
     }

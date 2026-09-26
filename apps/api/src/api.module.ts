@@ -20,6 +20,7 @@ import { MetaModule } from './modules/meta/meta.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { StudentsModule } from './modules/students/students.module';
 import { UsersModule } from './modules/users/users.module';
+import { WaitlistModule } from './modules/waitlist/waitlist.module';
 
 /** Default limit for every route without a stricter one (docs/03 §6.5). */
 const DEFAULT_LIMIT_PER_MINUTE = 120;
@@ -44,6 +45,7 @@ const DEFAULT_LIMIT_PER_MINUTE = 120;
     MentorsModule,
     AvailabilityModule,
     MetaModule,
+    WaitlistModule,
   ],
   providers: [
     // Global guards run in this order: rate limit first, then authentication (docs/03 §1).
