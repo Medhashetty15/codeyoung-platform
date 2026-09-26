@@ -20,6 +20,7 @@ Records are immutable once accepted; a change of mind is a new ADR that supersed
 | [0012](0012-account-required-booking-public-browsing.md) | Public slot browsing, account required to book | Accepted | Product |
 | [0013](0013-no-slot-holds-url-driven-wizard.md) | No slot holds; URL-driven wizard with conflict alternatives | Accepted | Product / UX |
 | [0014](0014-base-ui-tailwind-css-only-motion.md) | Base UI + Tailwind v4 + cva, CSS-only motion | Accepted | Frontend |
-| [0015](0015-design-system-as-source-of-truth.md) | Design system doc as the single source of visual truth | Accepted | Frontend / design |
+| [0015](0015-design-system-as-source-of-truth.md) | Design system doc as the single source of visual truth | Accepted, amended by 0016 | Frontend / design |
+| [0016](0016-replace-satoshi-with-figtree.md) | Replace Satoshi with Figtree (licence) | Accepted | Frontend / design |
 
 Template for new records: [template.md](template.md).

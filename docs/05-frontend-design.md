@@ -28,11 +28,11 @@ Library picks follow the curated `pick-ui-library` list; nothing is added withou
 | Primitives | **Base UI** (verify package name at install, `@base-ui/react`) | Unstyled, accessible dialogs, popovers, menus, combobox, tabs, accordion; exposes `data-starting-style` / `--transform-origin` for correct motion. |
 | Variants | cva + clsx + tailwind-merge | Typed component variants, clean conditional classes. |
 | Toasts | Sonner (headless `toast.custom`) | One `<Toaster />`, wrapped in our `notify()` API. |
-| Icons | Phosphor (`@phosphor-icons/react`) | One family, regular weight. |
+| Icons | Phosphor (`@phosphor-icons/core` SVGs, generated components) | One family, regular weight only; the React package ships all six weights per icon. |
 | Countdown | NumberFlow (`@number-flow/react`) | Proper digit transitions, reduced-motion aware. |
 | Motion | CSS transitions, `@starting-style`, Base UI data attributes | Cheapest tool that works; no Motion library in MVP (doc 07 §7.2). |
 | Time | `@app/time` (Temporal polyfill) + `Intl.DateTimeFormat` | Same formatters as email templates. |
-| Fonts | Satoshi Variable (self-hosted woff2), JetBrains Mono (`@fontsource-variable`) | No third-party font requests. |
+| Fonts | Figtree Variable and JetBrains Mono (`@fontsource-variable`, bundled; ADR 0016) | No third-party font requests. |
 | Testing | Vitest + RTL + MSW, Playwright + axe | See §13. |
 
 ## 3. Information architecture & routes

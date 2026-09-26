@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FAFAFA" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0E0E10" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Book a free, live one-on-one coding class for your child, at a time shown in your own time zone."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Book a free coding class | Codeyoung</title>
+    <script>
+      // Applies the saved theme before first paint (doc 07 §2.3). Keep in sync with src/shared/theme.
+      (function () {
+        var preference = null;
+        try {
+          preference = localStorage.getItem('cy-theme');
+        } catch (e) {}
+        var dark =
+          preference === 'dark' ||
+          (preference !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

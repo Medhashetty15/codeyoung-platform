@@ -1,6 +1,6 @@
 # 0015 - Design system doc as the single source of visual truth
 
-- **Status:** Accepted
+- **Status:** Accepted, typography amended by [0016](0016-replace-satoshi-with-figtree.md)
 - **Date:** 2026-09-26
 - **Deciders:** Author
 - **Related:** ADR 0014, [07 - Design system](../07-design-system.md)

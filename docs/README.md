@@ -24,4 +24,4 @@
 | D7 | UI kit | Tailwind v4 tokens + Base UI primitives + cva; Sonner, Phosphor, NumberFlow, zustand; CSS-only motion (no Motion lib in MVP) |
 | D8 | Test runner | Vitest everywhere (+ Testcontainers, Supertest, Playwright) |
 | D9 | Monorepo | npm workspaces |
-| D10 | Visual language | Calm / exact / warm. Zinc neutrals + single Forest accent, Satoshi + JetBrains Mono, light + dark themes (doc 07) |
+| D10 | Visual language | Calm / exact / warm. Zinc neutrals + single Forest accent, Figtree + JetBrains Mono, light + dark themes (doc 07) |
