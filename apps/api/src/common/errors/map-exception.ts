@@ -14,7 +14,7 @@ const TOO_MANY_REQUESTS = 429;
 const SERVICE_UNAVAILABLE = 503;
 
 /** Seconds a client should wait after a 503 when no better estimate exists. */
-export const DEFAULT_RETRY_AFTER_SECONDS = 5;
+const DEFAULT_RETRY_AFTER_SECONDS = 5;
 
 export interface MappedProblem {
   code: ErrorCode;

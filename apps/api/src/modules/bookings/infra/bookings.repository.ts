@@ -51,7 +51,7 @@ export interface NewBooking {
   createdAt: Temporal.Instant;
 }
 
-export function toBookingRecord(row: BookingEntity): BookingRecord {
+function toBookingRecord(row: BookingEntity): BookingRecord {
   return {
     id: row.id,
     reference: row.reference,

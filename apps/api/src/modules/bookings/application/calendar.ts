@@ -26,7 +26,7 @@ export interface CalendarEvent {
 }
 
 /** Stable event identity: every version of a booking updates the same calendar entry. */
-export function calendarUid(bookingId: string): string {
+function calendarUid(bookingId: string): string {
   return `${bookingId}@codeyoung`;
 }
 

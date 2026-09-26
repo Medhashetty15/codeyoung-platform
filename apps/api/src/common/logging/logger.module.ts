@@ -13,7 +13,7 @@ export type LogDestination = 'stdout' | 'stderr';
 
 const HEALTH_PATH = /^\/api\/v1\/health\//;
 
-export function buildLoggerParams(config: AppConfig, destination: LogDestination): Params {
+function buildLoggerParams(config: AppConfig, destination: LogDestination): Params {
   const fd = destination === 'stdout' ? 1 : 2;
   const pinoHttp: Options = {
     level: config.logLevel,

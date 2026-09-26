@@ -14,7 +14,7 @@ export interface OutboxEvents {
 
 export type OutboxEventType = keyof OutboxEvents;
 
-export const OUTBOX_EVENT_TYPES: readonly OutboxEventType[] = [
+const OUTBOX_EVENT_TYPES: readonly OutboxEventType[] = [
   'PasswordResetRequested',
   'PasswordChanged',
   'BookingConfirmed',

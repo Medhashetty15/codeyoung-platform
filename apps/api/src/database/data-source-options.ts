@@ -8,7 +8,7 @@ import { SnakeNamingStrategy } from './snake-naming.strategy';
 export type ProcessRole = 'api' | 'worker' | 'cli' | 'test';
 
 /** Queries slower than this are logged as warnings (docs/03 §2). */
-export const SLOW_QUERY_MS = 200;
+const SLOW_QUERY_MS = 200;
 
 const PG_DATE_OID = 1082;
 

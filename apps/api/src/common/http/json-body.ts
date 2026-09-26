@@ -5,7 +5,7 @@ import { ErrorCode } from '@app/contracts';
 import { AppError } from '../errors/app-error';
 
 /** Largest JSON body the API accepts; every documented request is far smaller. */
-export const JSON_BODY_LIMIT = '100kb';
+const JSON_BODY_LIMIT = '100kb';
 
 const BODY_ERROR_DETAILS: Record<string, string> = {
   'entity.parse.failed': 'The request body is not valid JSON.',
