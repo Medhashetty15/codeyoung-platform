@@ -3,14 +3,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppConfig } from '../config/app-config';
 
-export type ProcessRole = 'api' | 'worker' | 'cli';
+import { buildDataSourceOptions, type ProcessRole } from './data-source-options';
+import { TypeOrmLogger } from './typeorm-logger';
 
-/** Queries slower than this are logged as warnings (docs/03 §2). */
-const SLOW_QUERY_MS = 200;
+export type { ProcessRole };
 
 /**
- * PostgreSQL connection. Schema changes only happen through reviewed migrations
- * (`synchronize` and `migrationsRun` stay off), and every session runs in UTC.
+ * PostgreSQL connection for one process role. Schema changes only happen
+ * through reviewed migrations (`db:migrate`), and every session runs in UTC.
  */
 @Module({})
 export class DatabaseModule {
@@ -21,16 +21,12 @@ export class DatabaseModule {
         TypeOrmModule.forRootAsync({
           inject: [AppConfig],
           useFactory: (config: AppConfig) => ({
-            type: 'postgres',
-            url: config.databaseUrl,
-            applicationName: `codeyoung-${role}`,
-            synchronize: false,
-            migrationsRun: false,
-            maxQueryExecutionTime: SLOW_QUERY_MS,
-            logging: ['error', 'warn'],
+            ...buildDataSourceOptions(config.databaseUrl, role),
+            logger: new TypeOrmLogger(),
             retryAttempts: config.isProduction ? 10 : 3,
             retryDelay: 2000,
-            extra: { options: '-c timezone=UTC', max: role === 'cli' ? 2 : 10 },
+            // CLI commands connect on demand, so commands without a database still run.
+            manualInitialization: role === 'cli',
           }),
         }),
       ],
