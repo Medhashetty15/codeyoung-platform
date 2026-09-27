@@ -1,0 +1,18 @@
+# Every text file is LF in the repository and in every checkout, Windows included: the Docker
+# build (shell line continuations), the email templates and the CSP hash of the inline script in
+# apps/web/index.html all depend on the exact bytes.
+* text=auto eol=lf
+
+# Binary assets are stored and checked out as they are.
+*.avif binary
+*.gif binary
+*.ico binary
+*.jpeg binary
+*.jpg binary
+*.pdf binary
+*.png binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
