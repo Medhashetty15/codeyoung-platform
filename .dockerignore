@@ -4,6 +4,7 @@
 **/dist-*
 **/coverage
 **/*.tsbuildinfo
+**/.tsbuild
 **/.env
 **/.env.*
 !**/.env.example
@@ -12,5 +13,10 @@
 .worktrees
 .team
 docs
+apps/web/e2e-report
+apps/web/e2e-results
 apps/web/test-results
 apps/web/playwright-report
+**/*.log
+**/.DS_Store
+**/Thumbs.db
