@@ -104,13 +104,16 @@ jobs:
           --health-cmd "pg_isready -U codeyoung" --health-interval 5s --health-timeout 5s
           --health-retries 10
       mailpit:
-        image: axllent/mailpit:v1.27
+        # Same image as docker-compose.yml and the integration tests.
+        image: axllent/mailpit:v1.31.2
         env:
           MP_SMTP_AUTH_ACCEPT_ANY: 'true'
           MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
         ports: ['1025:1025', '8025:8025']
+    # Settings of the API, the worker and the ops CLI (migrations, e2e seed). NODE_ENV is set per
+    # step instead: at job level it leaked into `vite build`, which then shipped React's
+    # development build and failed the bundle budget.
     env:
-      NODE_ENV: development
       PORT: '3001'
       DATABASE_URL: postgres://codeyoung:codeyoung@localhost:5432/codeyoung_e2e
       JWT_ACCESS_SECRET: ci-e2e-secret-at-least-32-bytes-long-0123
@@ -128,9 +131,20 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
         working-directory: apps/web
-      - run: npm run build
-      - run: npm run db:migrate
+      - name: Build (production bundles)
+        run: npm run build
+        env:
+          NODE_ENV: production
+      # The built CLI: `npm run db:migrate` would rebuild the API first.
+      - name: Migrate the database
+        run: node dist/cli.js db:migrate
+        working-directory: apps/api
+        env:
+          NODE_ENV: development
       - name: Start the API and the worker
+        env:
+          NODE_ENV: development
+          LOG_PRETTY: 'false'
         run: |
           npm run start -w @app/api > api.log 2>&1 &
           npm run start:worker -w @app/api > worker.log 2>&1 &
@@ -141,8 +155,11 @@ jobs:
           cat api.log
           exit 1
       # Nothing listens on 4173 here, so Playwright starts and owns `vite preview` itself.
+      # The seed runs the ops CLI, which refuses production mode.
       - name: Playwright (seeds the e2e scenario per zone)
         run: npm run e2e -w @app/web
+        env:
+          NODE_ENV: development
       - if: failure()
         uses: actions/upload-artifact@v7
         with:

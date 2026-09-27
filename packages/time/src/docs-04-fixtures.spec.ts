@@ -9,6 +9,7 @@ import { formatTime } from './format.js';
 import { isoInstant } from './instant.js';
 import { zoneLabel } from './labels.js';
 import { wallWindowToInstants } from './wall-time.js';
+import { zoneOffset, zoneOffsetMinutes } from './zones.js';
 
 const NBSP = '\u00A0';
 
@@ -66,23 +67,25 @@ describe('docs/04 §2 worked example: same IST slot, different parent wall times
 });
 
 describe('docs/04 §2 offsets between zones across 2026', () => {
-  const gapMinutes = (instant: string, zone: string) => {
-    const offset = (z: string) =>
-      new Intl.DateTimeFormat('en-US', { timeZone: z, timeZoneName: 'longOffset' })
-        .formatToParts(Date.parse(instant))
-        .find((part) => part.type === 'timeZoneName')?.value;
-    return `${offset(zone)}|${offset('Asia/Kolkata')}`;
-  };
+  // ISO offsets from Temporal ('+00:00'), not Intl zone-name text: ICU releases word the
+  // zero offset differently ('GMT' in ICU 77, 'GMT+00:00' in ICU 78), the offsets never change.
+  const offsets = (instant: string, zone: string) =>
+    `${zoneOffset(zone, instant)}|${zoneOffset('Asia/Kolkata', instant)}`;
+  // How far the zone's clock is behind India's, the gap the §2 table is about.
+  const behindIndiaMinutes = (instant: string, zone: string) =>
+    zoneOffsetMinutes('Asia/Kolkata', instant) - zoneOffsetMinutes(zone, instant);
 
   it.each([
-    ['2026-02-01T12:00:00Z', 'GMT-05:00|GMT+05:30', 'GMT|GMT+05:30'],
-    ['2026-03-15T12:00:00Z', 'GMT-04:00|GMT+05:30', 'GMT|GMT+05:30'],
-    ['2026-06-01T12:00:00Z', 'GMT-04:00|GMT+05:30', 'GMT+01:00|GMT+05:30'],
-    ['2026-10-28T12:00:00Z', 'GMT-04:00|GMT+05:30', 'GMT|GMT+05:30'],
-    ['2026-11-15T12:00:00Z', 'GMT-05:00|GMT+05:30', 'GMT|GMT+05:30'],
-  ])('at %s', (instant, newYork, london) => {
-    expect(gapMinutes(instant, 'America/New_York')).toBe(newYork);
-    expect(gapMinutes(instant, 'Europe/London')).toBe(london);
+    ['2026-02-01T12:00:00Z', '-05:00|+05:30', 630, '+00:00|+05:30', 330],
+    ['2026-03-15T12:00:00Z', '-04:00|+05:30', 570, '+00:00|+05:30', 330],
+    ['2026-06-01T12:00:00Z', '-04:00|+05:30', 570, '+01:00|+05:30', 270],
+    ['2026-10-28T12:00:00Z', '-04:00|+05:30', 570, '+00:00|+05:30', 330],
+    ['2026-11-15T12:00:00Z', '-05:00|+05:30', 630, '+00:00|+05:30', 330],
+  ])('at %s', (instant, newYork, newYorkBehind, london, londonBehind) => {
+    expect(offsets(instant, 'America/New_York')).toBe(newYork);
+    expect(behindIndiaMinutes(instant, 'America/New_York')).toBe(newYorkBehind);
+    expect(offsets(instant, 'Europe/London')).toBe(london);
+    expect(behindIndiaMinutes(instant, 'Europe/London')).toBe(londonBehind);
   });
 });
 
