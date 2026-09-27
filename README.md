@@ -60,8 +60,19 @@ is no mentor or admin UI. Deliberate trade-offs:
 docker compose --profile app up --build   # PostgreSQL, Mailpit, migrate + demo data, API, worker, web
 ```
 
-If port 8080 is taken, choose another: `APP_PORT=8088 docker compose --profile app up --build`
-(then open that port instead).
+If port 8080 is taken, choose another and open that port instead:
+
+```sh
+APP_PORT=8088 docker compose --profile app up --build                  # bash, zsh
+$env:APP_PORT=8088; docker compose --profile app up --build            # Windows PowerShell
+```
+
+- Windows: Docker Desktop with the WSL 2 backend. A normal `git clone` works: `.gitattributes`
+  keeps text files LF, which the web image's security header depends on.
+- The one-off `migrate` container creates the database, applies migrations, loads the demo data
+  and then exits with code 0; that is expected.
+- Reset the demo data: `docker compose --profile app down -v` (removes the database volume), then
+  `up` again.
 
 Open http://localhost:8080 and book a trial as the demo parent `hannah.okafor@example.com` /
 `violet-harbour-lantern` (local seed data only), or register. Every email lands in Mailpit at

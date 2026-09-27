@@ -65,6 +65,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # A Windows clone (core.autocrlf=true) must still check out LF text files (.gitattributes):
+      # CRLF breaks the CSP hash of index.html's inline script and the Docker build.
+      - name: Windows-style clone keeps LF line endings
+        run: |
+          clone="$RUNNER_TEMP/crlf-clone"
+          git -c core.autocrlf=true clone --quiet --no-checkout "$GITHUB_WORKSPACE" "$clone"
+          git -C "$clone" -c core.autocrlf=true checkout --quiet "$(git rev-parse HEAD)"
+          if grep -rlI $'\r' "$clone" --exclude-dir=.git; then
+            echo 'These files have CRLF line endings in a core.autocrlf=true checkout.'
+            exit 1
+          fi
       - name: CLI smoke test
         env:
           DATABASE_URL: postgres://ci:ci@localhost:5432/ci
